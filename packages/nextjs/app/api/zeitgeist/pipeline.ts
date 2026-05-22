@@ -78,22 +78,50 @@ async function verifyQueryPaid(
   return null;
 }
 
-async function gatherSignals(groupName: string): Promise<{ snippets: string[]; lowConfidence: boolean }> {
-  const apiKey = process.env.BRAVE_SEARCH_API_KEY;
-  if (!apiKey) throw new Error("BRAVE_SEARCH_API_KEY not configured");
+async function generateSearchQueries(groupName: string, apiKey: string): Promise<string[]> {
+  const res = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+    body: JSON.stringify({
+      model: "gpt-4o-mini",
+      messages: [
+        {
+          role: "system",
+          content: `You generate targeted web search queries to find recent news, discourse, and community activity about a specific group, person, or community. 
+You must generate queries that are specific enough to avoid ambiguity — if the name could match multiple things (a city, a common name, etc.), add disambiguating context.
+Return a JSON object with a "queries" array of exactly 4 search query strings. Each query should target a different angle: recent news, community discourse, controversy or debate, and cultural impact.
+No markdown fences. JSON only.`,
+        },
+        {
+          role: "user",
+          content: `Generate 4 targeted search queries for: "${groupName}"`,
+        },
+      ],
+      response_format: { type: "json_object" },
+      temperature: 0.3,
+      max_tokens: 300,
+    }),
+  });
 
-  const queries = [
-    `"${groupName}" community discourse 2026`,
-    `${groupName} latest news sentiment`,
-    `${groupName} trending discussion`,
-  ];
+  if (!res.ok) throw new Error(`Query generation failed: ${res.status}`);
+  const data = (await res.json()) as { choices: { message: { content: string } }[] };
+  const parsed = JSON.parse(data.choices[0].message.content) as { queries: string[] };
+  return parsed.queries.slice(0, 4);
+}
+
+async function gatherSignals(groupName: string, apiKey: string): Promise<{ snippets: string[]; lowConfidence: boolean }> {
+  const braveKey = process.env.BRAVE_SEARCH_API_KEY;
+  if (!braveKey) throw new Error("BRAVE_SEARCH_API_KEY not configured");
+
+  // Use GPT-4o-mini to generate targeted, disambiguated search queries
+  const queries = await generateSearchQueries(groupName, apiKey);
 
   const snippets: string[] = [];
 
   for (const query of queries) {
     const url = `https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(query)}&count=5&freshness=pw`;
     const res = await fetch(url, {
-      headers: { Accept: "application/json", "Accept-Encoding": "gzip", "X-Subscription-Token": apiKey },
+      headers: { Accept: "application/json", "Accept-Encoding": "gzip", "X-Subscription-Token": braveKey },
     });
     if (!res.ok) continue;
     const data = (await res.json()) as { web?: { results?: { title: string; description: string }[] } };
@@ -111,22 +139,22 @@ async function synthesize(
   groupName: string,
   snippets: string[],
   lowConfidence: boolean,
+  apiKey: string,
 ): Promise<{ moodHeadline: string; signals: string[]; tldr: string; analysis: string; imagePrompt: string }> {
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) throw new Error("OPENAI_API_KEY not configured");
-
   const confidenceCaveat = lowConfidence
-    ? "NOTE: Fewer than 3 results found. Be transparent about thin data."
+    ? "NOTE: Fewer than 3 results found. Be transparent about thin data and acknowledge limited information."
     : "";
 
   const systemPrompt = `You are a sharp, irreverent cultural analyst — part journalist, part shitposter. Given real web signals about a community, produce a zeitgeist snapshot that reads like it was written by someone who is deeply online and genuinely funny.
 
+CRITICAL: Only use information that is actually present in the provided snippets. If the snippets are not relevant to the queried group, say so honestly in the analysis rather than making things up.
+
 Rules:
 - The moodHeadline should be punchy, specific, and slightly unhinged — not generic
-- Each signal must reference a SPECIFIC event, person, post, or debate from the snippets — no vague generalities
+- Each signal must reference a SPECIFIC event, person, post, or debate from the snippets — no vague generalities. If snippets don't contain relevant info, note that.
 - The tldr should be one brutally honest sentence
-- The analysis should be 3-4 meaty paragraphs — opinionated, specific, with cultural context. Name names. Reference actual events. Be willing to be a little mean.
-- The imagePrompt must describe a SURREAL, ABSURDIST, INTERNET-BRAIN visual — think chaotic collage energy, unexpected juxtapositions, wojak-adjacent vibes, something that would go viral in a Discord server. No literal sports imagery, no sunsets, no skylines. Think: what would a 4chan board dream about this group? Describe a weird, funny, symbolic scene with specific objects and chaos. No text, no words in the image.
+- The analysis should be 3-4 meaty paragraphs — opinionated, specific, with cultural context. Name names. Reference actual events. Be willing to be a little mean. If data is thin, say so.
+- The imagePrompt must describe a SURREAL, ABSURDIST, INTERNET-BRAIN visual — think chaotic collage energy, unexpected juxtapositions, wojak-adjacent vibes, something that would go viral in a Discord server. No literal imagery, no sunsets, no skylines. Think: what would a 4chan board dream about this group? Describe a weird, funny, symbolic scene with specific objects and chaos. No text, no words in the image.
 
 Output valid JSON only. No markdown fences. ${confidenceCaveat}`;
 
@@ -161,10 +189,7 @@ Return JSON:
   return JSON.parse(data.choices[0].message.content);
 }
 
-async function generateImage(prompt: string): Promise<string> {
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) throw new Error("OPENAI_API_KEY not configured");
-
+async function generateImage(prompt: string, apiKey: string): Promise<string> {
   const res = await fetch("https://api.openai.com/v1/images/generations", {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
@@ -214,14 +239,17 @@ export async function runZeitgeistPipeline(
     return { error: "Could not verify a QueryPaid event for this txHash + groupName on Base mainnet." };
   }
 
-  // Gather signals
-  const { snippets, lowConfidence } = await gatherSignals(groupName);
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) throw new Error("OPENAI_API_KEY not configured");
+
+  // Gather signals using GPT-generated targeted queries
+  const { snippets, lowConfidence } = await gatherSignals(groupName, apiKey);
 
   // Synthesize
-  const synthesis = await synthesize(groupName, snippets, lowConfidence);
+  const synthesis = await synthesize(groupName, snippets, lowConfidence, apiKey);
 
   // Generate image
-  const imageUrl = await generateImage(synthesis.imagePrompt);
+  const imageUrl = await generateImage(synthesis.imagePrompt, apiKey);
 
   // Build result
   const result: ZeitgeistResult = {
