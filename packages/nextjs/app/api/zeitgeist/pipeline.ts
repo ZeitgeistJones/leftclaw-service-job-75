@@ -121,7 +121,7 @@ async function synthesize(
 
   const systemPrompt = `You are a sharp cultural analyst. Given real web signals about a community, produce a zeitgeist snapshot.
 Rules: identify dominant mood, find 3-5 specific signals, write sharp cultural commentary, adapt tone to the community.
-The imagePrompt must be a safe, abstract, wordless visual metaphor suitable for all audiences — no people, no text, no controversial imagery. Think symbolic objects, landscapes, or abstract compositions.
+The imagePrompt must be a safe, abstract, wordless visual metaphor — symbolic objects, landscapes, or abstract compositions only. No people, no text, no controversial imagery.
 Output valid JSON only. No markdown fences. ${confidenceCaveat}`;
 
   const userPrompt = `Group: "${groupName}"
@@ -155,38 +155,40 @@ Return JSON:
   return JSON.parse(data.choices[0].message.content);
 }
 
-async function generateImage(prompt: string, groupName: string): Promise<string> {
+async function generateImage(prompt: string): Promise<string> {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) throw new Error("OPENAI_API_KEY not configured");
 
-  const safePrompt = `Abstract symbolic visual metaphor representing the cultural mood of ${groupName}. ${prompt}. No people, no text, no words, no letters. Safe for all audiences. Vivid colors, internet meme aesthetic.`;
-  const fallbackPrompt = `Abstract colorful digital art representing collective online energy and cultural mood. Symbolic shapes and patterns. No text, no people. Vibrant internet aesthetic.`;
+  // Use gpt-image-1 via the responses API (available on Tier 1)
+  const res = await fetch("https://api.openai.com/v1/responses", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+    body: JSON.stringify({
+      model: "gpt-image-1",
+      input: `${prompt}. Abstract symbolic art, no text, no words, no people. Vivid colors, digital art style.`,
+      tools: [{ type: "image_generation", quality: "low", size: "1024x1024" }],
+    }),
+  });
 
-  const attemptGeneration = async (p: string): Promise<string | null> => {
-    const res = await fetch("https://api.openai.com/v1/images/generations", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-      body: JSON.stringify({
-        model: "dall-e-3",
-        prompt: p,
-        n: 1,
-        size: "1024x1024",
-        quality: "standard",
-        style: "vivid",
-      }),
-    });
-    if (!res.ok) return null;
-    const data = (await res.json()) as { data: { url: string }[] };
-    return data.data?.[0]?.url ?? null;
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`Image generation failed: ${res.status} ${err}`);
+  }
+
+  const data = (await res.json()) as {
+    output?: { type: string; result?: { data?: { url?: string; b64_json?: string }[] } }[];
   };
 
-  let url = await attemptGeneration(safePrompt);
-  if (!url) {
-    // Content policy rejection — try generic fallback
-    url = await attemptGeneration(fallbackPrompt);
+  // Extract URL or base64 image
+  for (const item of data.output ?? []) {
+    if (item.type === "image_generation_call" && item.result?.data?.[0]) {
+      const img = item.result.data[0];
+      if (img.url) return img.url;
+      if (img.b64_json) return `data:image/png;base64,${img.b64_json}`;
+    }
   }
-  if (!url) throw new Error("DALL-E generation failed after fallback");
-  return url;
+
+  throw new Error("Image generation returned no image");
 }
 
 export async function runZeitgeistPipeline(
@@ -219,7 +221,7 @@ export async function runZeitgeistPipeline(
   const synthesis = await synthesize(groupName, snippets, lowConfidence);
 
   // Generate image
-  const imageUrl = await generateImage(synthesis.imagePrompt, groupName);
+  const imageUrl = await generateImage(synthesis.imagePrompt);
 
   // Build result
   const result: ZeitgeistResult = {
