@@ -159,7 +159,6 @@ async function generateImage(prompt: string): Promise<string> {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) throw new Error("OPENAI_API_KEY not configured");
 
-  // gpt-image-1 uses /v1/images/generations with output_format b64_json
   const res = await fetch("https://api.openai.com/v1/images/generations", {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
@@ -169,7 +168,7 @@ async function generateImage(prompt: string): Promise<string> {
       n: 1,
       size: "1024x1024",
       quality: "low",
-      output_format: "b64_json",
+      output_format: "png",
     }),
   });
 
@@ -193,32 +192,23 @@ export async function runZeitgeistPipeline(
 ): Promise<ZeitgeistResult | ZeitgeistError> {
   const key = cacheKey(txHash, groupName);
 
-  // Cache lookup FIRST — polling for an in-progress result bypasses rate limit
   const cached = await kv.get<ZeitgeistResult>(key);
   if (cached) return { ...cached, cached: true };
 
-  // Rate limit only applies to new (uncached) requests
   const allowed = await checkRateLimit(ip);
   if (!allowed) {
     return { error: "Rate limit exceeded. Try again in a minute.", retryAfterMs: 60000 };
   }
 
-  // Verify on-chain payment
   const verification = await verifyQueryPaid(txHash, groupName);
   if (!verification) {
     return { error: "Could not verify a QueryPaid event for this txHash + groupName on Base mainnet." };
   }
 
-  // Gather signals
   const { snippets, lowConfidence } = await gatherSignals(groupName);
-
-  // Synthesize
   const synthesis = await synthesize(groupName, snippets, lowConfidence);
-
-  // Generate image
   const imageUrl = await generateImage(synthesis.imagePrompt);
 
-  // Build result
   const result: ZeitgeistResult = {
     groupName,
     imageUrl,
