@@ -87,14 +87,21 @@ async function generateSearchQueries(groupName: string, apiKey: string): Promise
       messages: [
         {
           role: "system",
-          content: `You generate targeted web search queries to find recent news, discourse, and community activity about a specific group, person, or community. 
-You must generate queries that are specific enough to avoid ambiguity — if the name could match multiple things (a city, a common name, etc.), add disambiguating context.
-Return a JSON object with a "queries" array of exactly 4 search query strings. Each query should target a different angle: recent news, community discourse, controversy or debate, and cultural impact.
-No markdown fences. JSON only.`,
+          content: `You generate hyper-targeted web search queries to find recent news and discourse about a SPECIFIC group, person, event, or community.
+
+CRITICAL RULES:
+- Queries must be laser-focused on EXACTLY what was asked — not the broader category it belongs to
+- If asked about "Texas vs Arkansas baseball", search for THAT matchup specifically, NOT "SEC baseball tournament"
+- If asked about a specific person, include their full name plus disambiguating context (their field, organization, etc.)
+- If asked about a niche community, include specific terminology that community uses
+- Each query should target a different angle: the specific event/news, community reaction, key figures involved, and controversy or debate
+- Avoid broad category terms that would return results about adjacent topics
+
+Return a JSON object with a "queries" array of exactly 4 search query strings. JSON only, no markdown.`,
         },
         {
           role: "user",
-          content: `Generate 4 targeted search queries for: "${groupName}"`,
+          content: `Generate 4 hyper-targeted search queries for: "${groupName}"`,
         },
       ],
       response_format: { type: "json_object" },
@@ -113,7 +120,6 @@ async function gatherSignals(groupName: string, apiKey: string): Promise<{ snipp
   const braveKey = process.env.BRAVE_SEARCH_API_KEY;
   if (!braveKey) throw new Error("BRAVE_SEARCH_API_KEY not configured");
 
-  // Use GPT-4o-mini to generate targeted, disambiguated search queries
   const queries = await generateSearchQueries(groupName, apiKey);
 
   const snippets: string[] = [];
@@ -142,19 +148,19 @@ async function synthesize(
   apiKey: string,
 ): Promise<{ moodHeadline: string; signals: string[]; tldr: string; analysis: string; imagePrompt: string }> {
   const confidenceCaveat = lowConfidence
-    ? "NOTE: Fewer than 3 results found. Be transparent about thin data and acknowledge limited information."
+    ? "NOTE: Fewer than 3 results found. Be transparent about thin data."
     : "";
 
-  const systemPrompt = `You are a sharp, irreverent cultural analyst — part journalist, part shitposter. Given real web signals about a community, produce a zeitgeist snapshot that reads like it was written by someone who is deeply online and genuinely funny.
+  const systemPrompt = `You are a sharp, irreverent cultural analyst — part journalist, part shitposter. Given real web signals about a specific group or topic, produce a zeitgeist snapshot.
 
-CRITICAL: Only use information that is actually present in the provided snippets. If the snippets are not relevant to the queried group, say so honestly in the analysis rather than making things up.
+CRITICAL FOCUS RULE: Every signal, every sentence of analysis, every word of the TLDR must be SPECIFICALLY about "${groupName}" — not about adjacent topics, not about the broader category, not about related groups. If a snippet is about something adjacent (e.g., other teams in a tournament, other projects in a space), IGNORE IT completely. Only use information directly about the queried subject.
 
 Rules:
-- The moodHeadline should be punchy, specific, and slightly unhinged — not generic
-- Each signal must reference a SPECIFIC event, person, post, or debate from the snippets — no vague generalities. If snippets don't contain relevant info, note that.
-- The tldr should be one brutally honest sentence
-- The analysis should be 3-4 meaty paragraphs — opinionated, specific, with cultural context. Name names. Reference actual events. Be willing to be a little mean. If data is thin, say so.
-- The imagePrompt must describe a SURREAL, ABSURDIST, INTERNET-BRAIN visual — think chaotic collage energy, unexpected juxtapositions, wojak-adjacent vibes, something that would go viral in a Discord server. No literal imagery, no sunsets, no skylines. Think: what would a 4chan board dream about this group? Describe a weird, funny, symbolic scene with specific objects and chaos. No text, no words in the image.
+- moodHeadline: punchy, specific, slightly unhinged — directly about the queried group
+- signals: 3-5 items, each referencing a SPECIFIC event, person, or development from the snippets that is DIRECTLY about the queried group. Discard anything adjacent.
+- tldr: exactly 3 sentences — first sentence states the core situation, second adds the key tension or irony, third delivers the punchline or implication
+- analysis: 3-4 paragraphs, opinionated and specific, focused entirely on the queried group
+- imagePrompt: surreal, absurdist, internet-brain visual that captures the SPECIFIC vibe of this group — chaotic collage energy, unexpected juxtapositions. No text, no words in the image.
 
 Output valid JSON only. No markdown fences. ${confidenceCaveat}`;
 
@@ -165,11 +171,11 @@ ${snippets.join("\n")}
 
 Return JSON:
 {
-  "moodHeadline": "punchy specific mood — not generic",
-  "signals": ["specific signal with name/event 1", "specific signal with name/event 2", "specific signal with name/event 3", "specific signal 4", "specific signal 5"],
-  "tldr": "one brutally honest sentence",
-  "analysis": "3-4 paragraphs of sharp, specific, opinionated cultural commentary",
-  "imagePrompt": "surreal absurdist internet-brain scene, chaotic and funny, no text anywhere"
+  "moodHeadline": "punchy specific mood about exactly this group",
+  "signals": ["specific signal directly about this group 1", "specific signal 2", "specific signal 3"],
+  "tldr": "sentence 1: core situation. Sentence 2: key tension or irony. Sentence 3: punchline or implication.",
+  "analysis": "3-4 paragraphs focused entirely on this specific group",
+  "imagePrompt": "surreal absurdist scene capturing this group's specific vibe, no text"
 }`;
 
   const res = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -223,17 +229,14 @@ export async function runZeitgeistPipeline(
 ): Promise<ZeitgeistResult | ZeitgeistError> {
   const key = cacheKey(txHash, groupName);
 
-  // Cache lookup FIRST — polling bypasses rate limit
   const cached = await kv.get<ZeitgeistResult>(key);
   if (cached) return { ...cached, cached: true };
 
-  // Rate limit only applies to new (uncached) requests
   const allowed = await checkRateLimit(ip);
   if (!allowed) {
     return { error: "Rate limit exceeded. Try again in a minute.", retryAfterMs: 60000 };
   }
 
-  // Verify on-chain payment
   const verification = await verifyQueryPaid(txHash, groupName);
   if (!verification) {
     return { error: "Could not verify a QueryPaid event for this txHash + groupName on Base mainnet." };
@@ -242,16 +245,10 @@ export async function runZeitgeistPipeline(
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) throw new Error("OPENAI_API_KEY not configured");
 
-  // Gather signals using GPT-generated targeted queries
   const { snippets, lowConfidence } = await gatherSignals(groupName, apiKey);
-
-  // Synthesize
   const synthesis = await synthesize(groupName, snippets, lowConfidence, apiKey);
-
-  // Generate image
   const imageUrl = await generateImage(synthesis.imagePrompt, apiKey);
 
-  // Build result
   const result: ZeitgeistResult = {
     groupName,
     imageUrl,
