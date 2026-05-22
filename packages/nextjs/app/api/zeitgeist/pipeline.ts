@@ -87,33 +87,33 @@ async function generateSearchQueries(groupName: string, apiKey: string): Promise
       messages: [
         {
           role: "system",
-          content: `You generate hyper-targeted web search queries to find recent news and discourse about a SPECIFIC group, person, event, or community.
+          content: `You generate hyper-targeted search queries to capture the CURRENT MOMENT of discourse around a specific topic, person, or group. The goal is to find what people are saying RIGHT NOW — fan reactions, hot takes, live commentary, social media discourse — not career summaries or historical context.
 
 CRITICAL RULES:
-- Queries must be laser-focused on EXACTLY what was asked — not the broader category it belongs to
-- If asked about "Texas vs Arkansas baseball", search for THAT matchup specifically, NOT "SEC baseball tournament"
-- If asked about a specific person, include their full name plus disambiguating context (their field, organization, etc.)
-- If asked about a niche community, include specific terminology that community uses
-- Each query should target a different angle: the specific event/news, community reaction, key figures involved, and controversy or debate
-- Avoid broad category terms that would return results about adjacent topics
+- Queries must target CURRENT discourse and reactions, not background info
+- Include at least one query targeting Reddit discussion (add "site:reddit.com" or "reddit")
+- Include at least one query targeting fan/community reactions with words like "fans react", "reaction", "tonight", "right now", "takes"
+- Queries must be laser-focused on EXACTLY the topic asked — not the broader category
+- If asked about a specific person, include their name plus context to disambiguate
+- Avoid queries that would return Wikipedia-style summaries or season recaps
 
-Return a JSON object with a "queries" array of exactly 4 search query strings. JSON only, no markdown.`,
+Return a JSON object with a "queries" array of exactly 5 search query strings. JSON only, no markdown.`,
         },
         {
           role: "user",
-          content: `Generate 4 hyper-targeted search queries for: "${groupName}"`,
+          content: `Generate 5 hyper-targeted CURRENT DISCOURSE search queries for: "${groupName}"`,
         },
       ],
       response_format: { type: "json_object" },
       temperature: 0.3,
-      max_tokens: 300,
+      max_tokens: 400,
     }),
   });
 
   if (!res.ok) throw new Error(`Query generation failed: ${res.status}`);
   const data = (await res.json()) as { choices: { message: { content: string } }[] };
   const parsed = JSON.parse(data.choices[0].message.content) as { queries: string[] };
-  return parsed.queries.slice(0, 4);
+  return parsed.queries.slice(0, 5);
 }
 
 async function gatherSignals(groupName: string, apiKey: string): Promise<{ snippets: string[]; lowConfidence: boolean }> {
@@ -125,10 +125,31 @@ async function gatherSignals(groupName: string, apiKey: string): Promise<{ snipp
   const snippets: string[] = [];
 
   for (const query of queries) {
-    const url = `https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(query)}&count=5&freshness=pw`;
-    const res = await fetch(url, {
+    // Use past-day freshness to capture right-now discourse; fall back to past-week if no results
+    const urlDay = `https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(query)}&count=5&freshness=pd`;
+    const urlWeek = `https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(query)}&count=5&freshness=pw`;
+
+    let res = await fetch(urlDay, {
       headers: { Accept: "application/json", "Accept-Encoding": "gzip", "X-Subscription-Token": braveKey },
     });
+
+    // If past-day returns nothing, fall back to past-week
+    if (res.ok) {
+      const data = (await res.json()) as { web?: { results?: { title: string; description: string }[] } };
+      const results = data?.web?.results ?? [];
+      if (results.length === 0) {
+        res = await fetch(urlWeek, {
+          headers: { Accept: "application/json", "Accept-Encoding": "gzip", "X-Subscription-Token": braveKey },
+        });
+      } else {
+        for (const r of results) {
+          snippets.push(`${r.title}: ${r.description}`);
+        }
+        if (snippets.length >= 15) break;
+        continue;
+      }
+    }
+
     if (!res.ok) continue;
     const data = (await res.json()) as { web?: { results?: { title: string; description: string }[] } };
     const results = data?.web?.results ?? [];
@@ -151,31 +172,33 @@ async function synthesize(
     ? "NOTE: Fewer than 3 results found. Be transparent about thin data."
     : "";
 
-  const systemPrompt = `You are a sharp, irreverent cultural analyst — part journalist, part shitposter. Given real web signals about a specific group or topic, produce a zeitgeist snapshot.
+  const systemPrompt = `You are a deeply online cultural analyst capturing THE VIBE RIGHT NOW. Your job is not to summarize who someone is or what they've done historically — it's to capture what people are CURRENTLY saying, feeling, and arguing about in this exact moment.
 
-CRITICAL FOCUS RULE: Every signal, every sentence of analysis, every word of the TLDR must be SPECIFICALLY about "${groupName}" — not about adjacent topics, not about the broader category, not about related groups. If a snippet is about something adjacent (e.g., other teams in a tournament, other projects in a space), IGNORE IT completely. Only use information directly about the queried subject.
+CRITICAL: You are writing about the CURRENT MOMENT, not a biography. Deprioritize career stats, historical achievements, and background info. Prioritize: hot takes, fan reactions, ongoing debates, controversies happening right now, what's being posted today.
+
+FOCUS RULE: Every signal and every sentence must be SPECIFICALLY about "${groupName}" — not adjacent topics or the broader category.
 
 Rules:
-- moodHeadline: punchy, specific, slightly unhinged — directly about the queried group
-- signals: 3-5 items, each referencing a SPECIFIC event, person, or development from the snippets that is DIRECTLY about the queried group. Discard anything adjacent.
-- tldr: exactly 3 sentences — first sentence states the core situation, second adds the key tension or irony, third delivers the punchline or implication
-- analysis: 3-4 paragraphs, opinionated and specific, focused entirely on the queried group
-- imagePrompt: surreal, absurdist, internet-brain visual that captures the SPECIFIC vibe of this group — chaotic collage energy, unexpected juxtapositions. No text, no words in the image.
+- moodHeadline: captures the current emotional temperature — what's the vibe RIGHT NOW, not historically
+- signals: 3-5 items, each a specific CURRENT thing people are saying or reacting to — quotes, takes, debates, reactions. Discard anything that reads like background info.
+- tldr: exactly 3 sentences — sentence 1: what's happening right now, sentence 2: the key tension or hot take, sentence 3: the punchline or what this means
+- analysis: 3-4 paragraphs focused on the current discourse and vibe, not career summaries
+- imagePrompt: surreal, absurdist, internet-brain visual capturing the CURRENT energy — chaotic collage, wojak vibes, something that would get posted in a Discord right now. No text, no words.
 
 Output valid JSON only. No markdown fences. ${confidenceCaveat}`;
 
-  const userPrompt = `Group: "${groupName}"
+  const userPrompt = `Group/Topic: "${groupName}"
 
-Web signals from the past week:
+Current web signals (past 24-48 hours):
 ${snippets.join("\n")}
 
 Return JSON:
 {
-  "moodHeadline": "punchy specific mood about exactly this group",
-  "signals": ["specific signal directly about this group 1", "specific signal 2", "specific signal 3"],
-  "tldr": "sentence 1: core situation. Sentence 2: key tension or irony. Sentence 3: punchline or implication.",
-  "analysis": "3-4 paragraphs focused entirely on this specific group",
-  "imagePrompt": "surreal absurdist scene capturing this group's specific vibe, no text"
+  "moodHeadline": "current vibe right now — not historical",
+  "signals": ["what people are saying right now 1", "hot take or reaction 2", "current debate 3"],
+  "tldr": "Sentence 1: what's happening right now. Sentence 2: the key tension or hot take. Sentence 3: the punchline.",
+  "analysis": "3-4 paragraphs on the current discourse and vibe",
+  "imagePrompt": "surreal absurdist scene capturing this moment's energy, no text"
 }`;
 
   const res = await fetch("https://api.openai.com/v1/chat/completions", {
