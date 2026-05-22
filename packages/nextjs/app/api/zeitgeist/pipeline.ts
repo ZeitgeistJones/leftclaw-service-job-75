@@ -91,11 +91,11 @@ async function generateSearchQueries(groupName: string, apiKey: string): Promise
 
 CRITICAL RULES:
 - Queries must target CURRENT discourse and reactions, not background info
-- Include at least one query targeting Reddit discussion (add "site:reddit.com" or "reddit")
-- Include at least one query targeting fan/community reactions with words like "fans react", "reaction", "tonight", "right now", "takes"
+- Include at least two queries targeting Reddit or social media discussion
+- Include queries with words like "fans react", "reaction", "tonight", "right now", "takes", "twitter"
 - Queries must be laser-focused on EXACTLY the topic asked — not the broader category
-- If asked about a specific person, include their name plus context to disambiguate
-- Avoid queries that would return Wikipedia-style summaries or season recaps
+- If asked about a specific person or handle, include their exact name/handle
+- Avoid queries that would return Wikipedia-style summaries or generic overviews
 
 Return a JSON object with a "queries" array of exactly 5 search query strings. JSON only, no markdown.`,
         },
@@ -125,7 +125,6 @@ async function gatherSignals(groupName: string, apiKey: string): Promise<{ snipp
   const snippets: string[] = [];
 
   for (const query of queries) {
-    // Use past-day freshness to capture right-now discourse; fall back to past-week if no results
     const urlDay = `https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(query)}&count=5&freshness=pd`;
     const urlWeek = `https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(query)}&count=5&freshness=pw`;
 
@@ -133,9 +132,8 @@ async function gatherSignals(groupName: string, apiKey: string): Promise<{ snipp
       headers: { Accept: "application/json", "Accept-Encoding": "gzip", "X-Subscription-Token": braveKey },
     });
 
-    // If past-day returns nothing, fall back to past-week
     if (res.ok) {
-      const data = (await res.json()) as { web?: { results?: { title: string; description: string }[] } };
+      const data = (await res.json()) as { web?: { results?: { title: string; description: string; url?: string }[] } };
       const results = data?.web?.results ?? [];
       if (results.length === 0) {
         res = await fetch(urlWeek, {
@@ -143,23 +141,23 @@ async function gatherSignals(groupName: string, apiKey: string): Promise<{ snipp
         });
       } else {
         for (const r of results) {
-          snippets.push(`${r.title}: ${r.description}`);
+          snippets.push(`[${r.url ?? ''}] ${r.title}: ${r.description}`);
         }
-        if (snippets.length >= 15) break;
+        if (snippets.length >= 20) break;
         continue;
       }
     }
 
     if (!res.ok) continue;
-    const data = (await res.json()) as { web?: { results?: { title: string; description: string }[] } };
+    const data = (await res.json()) as { web?: { results?: { title: string; description: string; url?: string }[] } };
     const results = data?.web?.results ?? [];
     for (const r of results) {
-      snippets.push(`${r.title}: ${r.description}`);
+      snippets.push(`[${r.url ?? ''}] ${r.title}: ${r.description}`);
     }
-    if (snippets.length >= 15) break;
+    if (snippets.length >= 20) break;
   }
 
-  return { snippets: snippets.slice(0, 15), lowConfidence: snippets.length < 3 };
+  return { snippets: snippets.slice(0, 20), lowConfidence: snippets.length < 3 };
 }
 
 async function synthesize(
@@ -169,21 +167,21 @@ async function synthesize(
   apiKey: string,
 ): Promise<{ moodHeadline: string; signals: string[]; tldr: string; analysis: string; imagePrompt: string }> {
   const confidenceCaveat = lowConfidence
-    ? "NOTE: Fewer than 3 results found. Be transparent about thin data."
+    ? "NOTE: Very few results found. Be honest — say the data is thin rather than generating plausible-sounding generic content."
     : "";
 
   const systemPrompt = `You are a deeply online cultural analyst capturing THE VIBE RIGHT NOW. Your job is not to summarize who someone is or what they've done historically — it's to capture what people are CURRENTLY saying, feeling, and arguing about in this exact moment.
 
-CRITICAL: You are writing about the CURRENT MOMENT, not a biography. Deprioritize career stats, historical achievements, and background info. Prioritize: hot takes, fan reactions, ongoing debates, controversies happening right now, what's being posted today.
+ANTI-HALLUCINATION RULE: If the snippets contain no information specifically about the queried group, say so honestly. Do NOT generate plausible-sounding generic content about what "people might be saying." If you don't have real data, admit it with humor — e.g. "The internet has nothing to say about this yet, which is itself a vibe."
 
-FOCUS RULE: Every signal and every sentence must be SPECIFICALLY about "${groupName}" — not adjacent topics or the broader category.
+FOCUS RULE: Every signal must be SPECIFICALLY about "${groupName}" — not adjacent topics or the broader category. Discard anything that's not directly about the queried subject.
 
 Rules:
-- moodHeadline: captures the current emotional temperature — what's the vibe RIGHT NOW, not historically
-- signals: 3-5 items, each a specific CURRENT thing people are saying or reacting to — quotes, takes, debates, reactions. Discard anything that reads like background info.
-- tldr: exactly 3 sentences — sentence 1: what's happening right now, sentence 2: the key tension or hot take, sentence 3: the punchline or what this means
-- analysis: 3-4 paragraphs focused on the current discourse and vibe, not career summaries
-- imagePrompt: surreal, absurdist, internet-brain visual capturing the CURRENT energy — chaotic collage, wojak vibes, something that would get posted in a Discord right now. No text, no words.
+- moodHeadline: captures the current emotional temperature — punchy, specific, slightly unhinged
+- signals: exactly 5 items. Each must be a specific CURRENT thing from the snippets. At least ONE signal must include a direct quote from the source material if any quoted text appears in the snippets (format: "Someone said: '[quote]' — [source URL]"). Include the source URL from the snippet data when attaching a quote. If no quotes are available, note that.
+- tldr: exactly 2 sentences. Both sentences must be FUNNY — dry wit, absurdist, or brutally honest. No corporate-speak.
+- analysis: 3-4 paragraphs focused on the current discourse and vibe, not career summaries. If data is thin, be honest and funny about it.
+- imagePrompt: surreal, absurdist, internet-brain visual capturing the CURRENT energy — chaotic collage, wojak vibes. No text, no words in the image.
 
 Output valid JSON only. No markdown fences. ${confidenceCaveat}`;
 
@@ -194,11 +192,11 @@ ${snippets.join("\n")}
 
 Return JSON:
 {
-  "moodHeadline": "current vibe right now — not historical",
-  "signals": ["what people are saying right now 1", "hot take or reaction 2", "current debate 3"],
-  "tldr": "Sentence 1: what's happening right now. Sentence 2: the key tension or hot take. Sentence 3: the punchline.",
-  "analysis": "3-4 paragraphs on the current discourse and vibe",
-  "imagePrompt": "surreal absurdist scene capturing this moment's energy, no text"
+  "moodHeadline": "current vibe right now",
+  "signals": ["signal 1", "signal 2", "signal 3", "signal 4 — include direct quote if available: 'quoted text here' — https://source.url", "signal 5"],
+  "tldr": "Funny sentence 1. Funny sentence 2.",
+  "analysis": "3-4 paragraphs on the current discourse",
+  "imagePrompt": "surreal absurdist scene, no text"
 }`;
 
   const res = await fetch("https://api.openai.com/v1/chat/completions", {
