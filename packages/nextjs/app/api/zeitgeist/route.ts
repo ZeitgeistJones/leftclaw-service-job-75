@@ -1,17 +1,33 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { runZeitgeistPipeline } from "./pipeline";
 
-// Force static so this can ship inside a Next.js `output: "export"` build
-// (the IPFS build). When deployed to Vercel as a real Node runtime, swap this
-// stub for the full pipeline in `./pipeline.ts` and remove `force-static`.
-export const dynamic = "force-static";
+export const dynamic = "force-dynamic";
 
-export async function GET() {
-  return NextResponse.json(
-    {
-      error:
-        "Zeitgeist backend is not configured on this host. Deploy the project to Vercel and wire up BRAVE_SEARCH_API_KEY, OPENAI_API_KEY, and KV_REST_API_* env vars to enable result generation.",
-      setupRequired: true,
-    },
-    { status: 503 },
-  );
+export async function POST(req: NextRequest): Promise<NextResponse> {
+  let body: { txHash?: string; groupName?: string };
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
+
+  const { txHash, groupName } = body;
+
+  if (!txHash || !groupName) {
+    return NextResponse.json({ error: "txHash and groupName are required" }, { status: 400 });
+  }
+
+  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+
+  try {
+    const result = await runZeitgeistPipeline(txHash as `0x${string}`, groupName, ip);
+    if ("error" in result) {
+      const status = result.retryAfterMs ? 429 : 402;
+      return NextResponse.json(result, { status });
+    }
+    return NextResponse.json(result);
+  } catch (err: unknown) {
+    console.error("Zeitgeist pipeline error:", err);
+    return NextResponse.json({ error: "Internal server error. Please try again." }, { status: 502 });
+  }
 }
