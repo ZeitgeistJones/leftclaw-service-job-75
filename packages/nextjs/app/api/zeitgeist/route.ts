@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { runZeitgeistPipeline } from "./pipeline";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60; // 60s — needed for Brave + GPT-4o + DALL-E pipeline
 
 async function handle(txHash: string | null, groupName: string | null, ip: string): Promise<NextResponse> {
   if (!txHash || !groupName) {
