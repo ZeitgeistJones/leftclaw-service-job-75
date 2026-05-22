@@ -119,23 +119,29 @@ async function synthesize(
     ? "NOTE: Fewer than 3 results found. Be transparent about thin data."
     : "";
 
-  const systemPrompt = `You are a sharp cultural analyst. Given real web signals about a community, produce a zeitgeist snapshot.
-Rules: identify dominant mood, find 3-5 specific signals, write sharp cultural commentary, adapt tone to the community.
-The imagePrompt must be a safe, abstract, wordless visual metaphor — symbolic objects, landscapes, or abstract compositions only. No people, no text, no controversial imagery.
+  const systemPrompt = `You are a sharp, irreverent cultural analyst — part journalist, part shitposter. Given real web signals about a community, produce a zeitgeist snapshot that reads like it was written by someone who is deeply online and genuinely funny.
+
+Rules:
+- The moodHeadline should be punchy, specific, and slightly unhinged — not generic
+- Each signal must reference a SPECIFIC event, person, post, or debate from the snippets — no vague generalities
+- The tldr should be one brutally honest sentence
+- The analysis should be 3-4 meaty paragraphs — opinionated, specific, with cultural context. Name names. Reference actual events. Be willing to be a little mean.
+- The imagePrompt must describe a SURREAL, ABSURDIST, INTERNET-BRAIN visual — think chaotic collage energy, unexpected juxtapositions, wojak-adjacent vibes, something that would go viral in a Discord server. No literal sports imagery, no sunsets, no skylines. Think: what would a 4chan board dream about this group? Describe a weird, funny, symbolic scene with specific objects and chaos. No text, no words in the image.
+
 Output valid JSON only. No markdown fences. ${confidenceCaveat}`;
 
   const userPrompt = `Group: "${groupName}"
 
-Signals:
+Web signals from the past week:
 ${snippets.join("\n")}
 
 Return JSON:
 {
-  "moodHeadline": "one-line mood",
-  "signals": ["signal 1", "signal 2", "signal 3"],
-  "tldr": "one sentence",
-  "analysis": "2-4 paragraph cultural commentary",
-  "imagePrompt": "safe abstract wordless visual metaphor, symbolic objects or landscapes only"
+  "moodHeadline": "punchy specific mood — not generic",
+  "signals": ["specific signal with name/event 1", "specific signal with name/event 2", "specific signal with name/event 3", "specific signal 4", "specific signal 5"],
+  "tldr": "one brutally honest sentence",
+  "analysis": "3-4 paragraphs of sharp, specific, opinionated cultural commentary",
+  "imagePrompt": "surreal absurdist internet-brain scene, chaotic and funny, no text anywhere"
 }`;
 
   const res = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -145,8 +151,8 @@ Return JSON:
       model: "gpt-4o",
       messages: [{ role: "system", content: systemPrompt }, { role: "user", content: userPrompt }],
       response_format: { type: "json_object" },
-      temperature: 0.7,
-      max_tokens: 1200,
+      temperature: 0.9,
+      max_tokens: 2000,
     }),
   });
 
@@ -164,7 +170,7 @@ async function generateImage(prompt: string): Promise<string> {
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
     body: JSON.stringify({
       model: "gpt-image-1",
-      prompt: `${prompt}. Abstract symbolic art, no text, no words, no people. Vivid colors, digital art style.`,
+      prompt: `${prompt}. No text, no words, no letters anywhere in the image. Chaotic internet meme aesthetic.`,
       n: 1,
       size: "1024x1024",
       quality: "low",
