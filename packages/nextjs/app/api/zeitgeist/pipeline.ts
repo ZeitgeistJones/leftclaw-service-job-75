@@ -121,7 +121,7 @@ async function synthesize(
 
   const systemPrompt = `You are a sharp cultural analyst. Given real web signals about a community, produce a zeitgeist snapshot.
 Rules: identify dominant mood, find 3-5 specific signals, write sharp cultural commentary, adapt tone to the community.
-The imagePrompt must describe a WORDLESS visual metaphor — no text, no captions, purely visual storytelling.
+The imagePrompt must be a safe, abstract, wordless visual metaphor suitable for all audiences — no people, no text, no controversial imagery. Think symbolic objects, landscapes, or abstract compositions.
 Output valid JSON only. No markdown fences. ${confidenceCaveat}`;
 
   const userPrompt = `Group: "${groupName}"
@@ -135,7 +135,7 @@ Return JSON:
   "signals": ["signal 1", "signal 2", "signal 3"],
   "tldr": "one sentence",
   "analysis": "2-4 paragraph cultural commentary",
-  "imagePrompt": "detailed wordless visual metaphor description"
+  "imagePrompt": "safe abstract wordless visual metaphor, symbolic objects or landscapes only"
 }`;
 
   const res = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -155,27 +155,37 @@ Return JSON:
   return JSON.parse(data.choices[0].message.content);
 }
 
-async function generateImage(prompt: string): Promise<string> {
+async function generateImage(prompt: string, groupName: string): Promise<string> {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) throw new Error("OPENAI_API_KEY not configured");
 
-  const res = await fetch("https://api.openai.com/v1/images/generations", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-    body: JSON.stringify({
-      model: "dall-e-3",
-      prompt: `${prompt}. Style: meme-native internet aesthetic. CRITICAL: absolutely no text, no words, no letters anywhere in the image.`,
-      n: 1,
-      size: "1024x1024",
-      quality: "standard",
-      style: "vivid",
-    }),
-  });
+  const safePrompt = `Abstract symbolic visual metaphor representing the cultural mood of ${groupName}. ${prompt}. No people, no text, no words, no letters. Safe for all audiences. Vivid colors, internet meme aesthetic.`;
+  const fallbackPrompt = `Abstract colorful digital art representing collective online energy and cultural mood. Symbolic shapes and patterns. No text, no people. Vibrant internet aesthetic.`;
 
-  if (!res.ok) throw new Error(`DALL-E generation failed: ${res.status}`);
-  const data = (await res.json()) as { data: { url: string }[] };
-  const url = data.data?.[0]?.url;
-  if (!url) throw new Error("DALL-E returned no image URL");
+  const attemptGeneration = async (p: string): Promise<string | null> => {
+    const res = await fetch("https://api.openai.com/v1/images/generations", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+      body: JSON.stringify({
+        model: "dall-e-3",
+        prompt: p,
+        n: 1,
+        size: "1024x1024",
+        quality: "standard",
+        style: "vivid",
+      }),
+    });
+    if (!res.ok) return null;
+    const data = (await res.json()) as { data: { url: string }[] };
+    return data.data?.[0]?.url ?? null;
+  };
+
+  let url = await attemptGeneration(safePrompt);
+  if (!url) {
+    // Content policy rejection — try generic fallback
+    url = await attemptGeneration(fallbackPrompt);
+  }
+  if (!url) throw new Error("DALL-E generation failed after fallback");
   return url;
 }
 
@@ -209,7 +219,7 @@ export async function runZeitgeistPipeline(
   const synthesis = await synthesize(groupName, snippets, lowConfidence);
 
   // Generate image
-  const imageUrl = await generateImage(synthesis.imagePrompt);
+  const imageUrl = await generateImage(synthesis.imagePrompt, groupName);
 
   // Build result
   const result: ZeitgeistResult = {
