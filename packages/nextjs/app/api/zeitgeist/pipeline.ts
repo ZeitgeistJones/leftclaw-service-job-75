@@ -159,14 +159,17 @@ async function generateImage(prompt: string): Promise<string> {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) throw new Error("OPENAI_API_KEY not configured");
 
-  // Use gpt-image-1 via the responses API (available on Tier 1)
-  const res = await fetch("https://api.openai.com/v1/responses", {
+  // gpt-image-1 uses /v1/images/generations with output_format b64_json
+  const res = await fetch("https://api.openai.com/v1/images/generations", {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
     body: JSON.stringify({
       model: "gpt-image-1",
-      input: `${prompt}. Abstract symbolic art, no text, no words, no people. Vivid colors, digital art style.`,
-      tools: [{ type: "image_generation", quality: "low", size: "1024x1024" }],
+      prompt: `${prompt}. Abstract symbolic art, no text, no words, no people. Vivid colors, digital art style.`,
+      n: 1,
+      size: "1024x1024",
+      quality: "low",
+      output_format: "b64_json",
     }),
   });
 
@@ -175,20 +178,12 @@ async function generateImage(prompt: string): Promise<string> {
     throw new Error(`Image generation failed: ${res.status} ${err}`);
   }
 
-  const data = (await res.json()) as {
-    output?: { type: string; result?: { data?: { url?: string; b64_json?: string }[] } }[];
-  };
-
-  // Extract URL or base64 image
-  for (const item of data.output ?? []) {
-    if (item.type === "image_generation_call" && item.result?.data?.[0]) {
-      const img = item.result.data[0];
-      if (img.url) return img.url;
-      if (img.b64_json) return `data:image/png;base64,${img.b64_json}`;
-    }
-  }
-
-  throw new Error("Image generation returned no image");
+  const data = (await res.json()) as { data: { b64_json?: string; url?: string }[] };
+  const img = data.data?.[0];
+  if (!img) throw new Error("Image generation returned no image");
+  if (img.b64_json) return `data:image/png;base64,${img.b64_json}`;
+  if (img.url) return img.url;
+  throw new Error("Image generation returned no usable image data");
 }
 
 export async function runZeitgeistPipeline(
