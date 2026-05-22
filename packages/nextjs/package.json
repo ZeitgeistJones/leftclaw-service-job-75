@@ -16,6 +16,7 @@
     "vercel:yolo": "vercel --build-env YARN_ENABLE_IMMUTABLE_INSTALLS=false --build-env ENABLE_EXPERIMENTAL_COREPACK=1 --build-env NEXT_PUBLIC_IGNORE_BUILD_ERROR=true --build-env VERCEL_TELEMETRY_DISABLED=1"
   },
   "dependencies": {
+    "@vercel/kv": "^3.0.0",
     "@heroicons/react": "~2.1.5",
     "@rainbow-me/rainbowkit": "2.2.9",
     "@react-native-async-storage/async-storage": "~2.2.0",
@@ -35,6 +36,7 @@
     "react-dom": "~19.2.3",
     "react-hot-toast": "~2.4.0",
     "usehooks-ts": "~3.1.0",
+    "openai": "^4.0.0",
     "viem": "2.39.0",
     "wagmi": "2.19.5",
     "zustand": "~5.0.0"
@@ -60,3 +62,4 @@
   },
   "packageManager": "yarn@4.13.0"
 }
+
