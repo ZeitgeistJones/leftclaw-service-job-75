@@ -78,7 +78,11 @@ async function verifyQueryPaid(
   return null;
 }
 
-async function generateSearchQueries(groupName: string, apiKey: string): Promise<string[]> {
+async function generateSearchQueries(groupName: string, apiKey: string): Promise<{
+  braveQueries: string[];
+  redditQuery: string;
+  farcasterQuery: string;
+}> {
   const res = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
@@ -87,82 +91,159 @@ async function generateSearchQueries(groupName: string, apiKey: string): Promise
       messages: [
         {
           role: "system",
-          content: `You generate hyper-targeted search queries to capture the CURRENT MOMENT of discourse around a specific topic, person, or group. The goal is to find what people are saying RIGHT NOW — fan reactions, hot takes, live commentary, social media discourse — not career summaries or historical context.
+          content: `You generate hyper-targeted search queries to capture the CURRENT MOMENT of discourse around a specific topic, person, or group.
 
 CRITICAL RULES:
-- Queries must target CURRENT discourse and reactions, not background info
-- Include at least two queries targeting Reddit or social media discussion
-- Include queries with words like "fans react", "reaction", "tonight", "right now", "takes", "twitter"
-- Queries must be laser-focused on EXACTLY the topic asked — not the broader category
-- If asked about a specific person or handle, include their exact name/handle
-- Avoid queries that would return Wikipedia-style summaries or generic overviews
+- Queries must target CURRENT discourse and reactions, not background info or history
+- braveQueries: 4 web search queries — mix of news, fan reactions, and controversy. Include "today" or "2026" where appropriate.
+- redditQuery: 1 Reddit search query — short, direct, what someone would type in Reddit search to find current threads about this topic
+- farcasterQuery: 1 Farcaster/crypto social query — if the topic is crypto/web3/tech, make it specific to that community's language; otherwise use the topic name directly
+- All queries must be laser-focused on EXACTLY the topic asked, not the broader category
+- Avoid queries that return Wikipedia-style summaries
 
-Return a JSON object with a "queries" array of exactly 5 search query strings. JSON only, no markdown.`,
+Return JSON with: { "braveQueries": ["q1","q2","q3","q4"], "redditQuery": "q", "farcasterQuery": "q" }. JSON only.`,
         },
         {
           role: "user",
-          content: `Generate 5 hyper-targeted CURRENT DISCOURSE search queries for: "${groupName}"`,
+          content: `Generate targeted queries for: "${groupName}"`,
         },
       ],
       response_format: { type: "json_object" },
       temperature: 0.3,
-      max_tokens: 400,
+      max_tokens: 500,
     }),
   });
 
   if (!res.ok) throw new Error(`Query generation failed: ${res.status}`);
   const data = (await res.json()) as { choices: { message: { content: string } }[] };
-  const parsed = JSON.parse(data.choices[0].message.content) as { queries: string[] };
-  return parsed.queries.slice(0, 5);
+  const parsed = JSON.parse(data.choices[0].message.content) as {
+    braveQueries: string[];
+    redditQuery: string;
+    farcasterQuery: string;
+  };
+  return {
+    braveQueries: (parsed.braveQueries ?? []).slice(0, 4),
+    redditQuery: parsed.redditQuery ?? groupName,
+    farcasterQuery: parsed.farcasterQuery ?? groupName,
+  };
 }
 
-async function gatherSignals(groupName: string, apiKey: string): Promise<{ snippets: string[]; lowConfidence: boolean }> {
+type Snippet = { text: string; url: string; source: string };
+
+async function gatherSignals(groupName: string, apiKey: string): Promise<{ snippets: Snippet[]; lowConfidence: boolean }> {
   const braveKey = process.env.BRAVE_SEARCH_API_KEY;
   if (!braveKey) throw new Error("BRAVE_SEARCH_API_KEY not configured");
 
-  const queries = await generateSearchQueries(groupName, apiKey);
+  const { braveQueries, redditQuery, farcasterQuery } = await generateSearchQueries(groupName, apiKey);
 
-  const snippets: string[] = [];
+  const snippets: Snippet[] = [];
 
-  for (const query of queries) {
-    const urlDay = `https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(query)}&count=5&freshness=pd`;
-    const urlWeek = `https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(query)}&count=5&freshness=pw`;
-
-    let res = await fetch(urlDay, {
+  // 1. Brave News search (freshest breaking content)
+  for (const query of braveQueries.slice(0, 2)) {
+    const url = `https://api.search.brave.com/res/v1/news/search?q=${encodeURIComponent(query)}&count=10&freshness=pd`;
+    const res = await fetch(url, {
       headers: { Accept: "application/json", "Accept-Encoding": "gzip", "X-Subscription-Token": braveKey },
     });
+    if (!res.ok) continue;
+    const data = (await res.json()) as { results?: { title: string; description: string; url: string }[] };
+    for (const r of (data.results ?? [])) {
+      snippets.push({ text: `${r.title}: ${r.description}`, url: r.url, source: "news" });
+    }
+  }
 
+  // 2. Brave Web search (broader web, past day then week fallback)
+  for (const query of braveQueries) {
+    let fetchUrl = `https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(query)}&count=10&freshness=pd`;
+    let res = await fetch(fetchUrl, {
+      headers: { Accept: "application/json", "Accept-Encoding": "gzip", "X-Subscription-Token": braveKey },
+    });
     if (res.ok) {
-      const data = (await res.json()) as { web?: { results?: { title: string; description: string; url?: string }[] } };
+      const data = (await res.json()) as { web?: { results?: { title: string; description: string; url: string }[] } };
       const results = data?.web?.results ?? [];
       if (results.length === 0) {
-        res = await fetch(urlWeek, {
+        fetchUrl = `https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(query)}&count=10&freshness=pw`;
+        res = await fetch(fetchUrl, {
           headers: { Accept: "application/json", "Accept-Encoding": "gzip", "X-Subscription-Token": braveKey },
         });
       } else {
         for (const r of results) {
-          snippets.push(`[${r.url ?? ''}] ${r.title}: ${r.description}`);
+          snippets.push({ text: `${r.title}: ${r.description}`, url: r.url, source: "web" });
         }
-        if (snippets.length >= 20) break;
         continue;
       }
     }
-
     if (!res.ok) continue;
-    const data = (await res.json()) as { web?: { results?: { title: string; description: string; url?: string }[] } };
-    const results = data?.web?.results ?? [];
-    for (const r of results) {
-      snippets.push(`[${r.url ?? ''}] ${r.title}: ${r.description}`);
+    const data = (await res.json()) as { web?: { results?: { title: string; description: string; url: string }[] } };
+    for (const r of (data?.web?.results ?? [])) {
+      snippets.push({ text: `${r.title}: ${r.description}`, url: r.url, source: "web" });
     }
-    if (snippets.length >= 20) break;
   }
 
-  return { snippets: snippets.slice(0, 20), lowConfidence: snippets.length < 3 };
+  // 3. Reddit search (real-time community discourse, no API key needed)
+  try {
+    const redditUrl = `https://www.reddit.com/search.json?q=${encodeURIComponent(redditQuery)}&sort=new&limit=10&t=week`;
+    const redditRes = await fetch(redditUrl, {
+      headers: { "User-Agent": "zeitgeist-app/1.0" },
+    });
+    if (redditRes.ok) {
+      const redditData = (await redditRes.json()) as {
+        data?: { children?: { data: { title: string; selftext: string; url: string; subreddit: string } }[] };
+      };
+      for (const post of (redditData.data?.children ?? []).slice(0, 8)) {
+        const d = post.data;
+        const preview = d.selftext ? d.selftext.slice(0, 150) : "";
+        snippets.push({
+          text: `[Reddit r/${d.subreddit}] ${d.title}${preview ? `: "${preview}"` : ""}`,
+          url: d.url,
+          source: "reddit",
+        });
+      }
+    }
+  } catch {
+    // Reddit fetch failed, continue without it
+  }
+
+  // 4. Farcaster search via Searchcaster (crypto-native discourse)
+  try {
+    const fcUrl = `https://searchcaster.xyz/api/search?text=${encodeURIComponent(farcasterQuery)}&count=8`;
+    const fcRes = await fetch(fcUrl, {
+      headers: { "User-Agent": "zeitgeist-app/1.0" },
+    });
+    if (fcRes.ok) {
+      const fcData = (await fcRes.json()) as {
+        casts?: { body: { data: { text: string }; username: string }; merkleRoot: string }[];
+      };
+      for (const cast of (fcData.casts ?? []).slice(0, 6)) {
+        const text = cast.body?.data?.text ?? "";
+        const user = cast.body?.username ?? "unknown";
+        if (text.length > 10) {
+          snippets.push({
+            text: `[Farcaster @${user}]: "${text.slice(0, 200)}"`,
+            url: `https://warpcast.com/${user}`,
+            source: "farcaster",
+          });
+        }
+      }
+    }
+  } catch {
+    // Farcaster fetch failed, continue without it
+  }
+
+  // Deduplicate and limit
+  const seen = new Set<string>();
+  const unique = snippets.filter(s => {
+    const key = s.text.slice(0, 80);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+
+  return { snippets: unique.slice(0, 25), lowConfidence: unique.length < 3 };
 }
 
 async function synthesize(
   groupName: string,
-  snippets: string[],
+  snippets: Snippet[],
   lowConfidence: boolean,
   apiKey: string,
 ): Promise<{ moodHeadline: string; signals: string[]; tldr: string; analysis: string; imagePrompt: string }> {
@@ -170,30 +251,34 @@ async function synthesize(
     ? "NOTE: Very few results found. Be honest — say the data is thin rather than generating plausible-sounding generic content."
     : "";
 
-  const systemPrompt = `You are a deeply online cultural analyst capturing THE VIBE RIGHT NOW. Your job is not to summarize who someone is or what they've done historically — it's to capture what people are CURRENTLY saying, feeling, and arguing about in this exact moment.
+  const snippetText = snippets.map(s => `[${s.source.toUpperCase()} | ${s.url}] ${s.text}`).join("\n");
 
-ANTI-HALLUCINATION RULE: If the snippets contain no information specifically about the queried group, say so honestly. Do NOT generate plausible-sounding generic content about what "people might be saying." If you don't have real data, admit it with humor — e.g. "The internet has nothing to say about this yet, which is itself a vibe."
+  const systemPrompt = `You are a deeply online cultural analyst capturing THE VIBE RIGHT NOW. Your job is to capture what people are CURRENTLY saying, feeling, and arguing about — not historical summaries.
 
-FOCUS RULE: Every signal must be SPECIFICALLY about "${groupName}" — not adjacent topics or the broader category. Discard anything that's not directly about the queried subject.
+ANTI-HALLUCINATION RULE: Only use information actually present in the snippets. If the snippets contain no information specifically about the queried group, say so honestly with humor — e.g. "The internet has nothing to say about this yet, which is itself a vibe."
+
+FOCUS RULE: Every signal must be SPECIFICALLY about "${groupName}". Discard anything about adjacent topics.
+
+SOURCE TYPES in snippets: NEWS = breaking articles, WEB = general web, REDDIT = community posts, FARCASTER = crypto social posts. Prioritize REDDIT and FARCASTER sources for quotes as they contain actual human voices.
 
 Rules:
-- moodHeadline: captures the current emotional temperature — punchy, specific, slightly unhinged
-- signals: exactly 5 items. Each must be a specific CURRENT thing from the snippets. At least ONE signal must include a direct quote from the source material if any quoted text appears in the snippets (format: "Someone said: '[quote]' — [source URL]"). Include the source URL from the snippet data when attaching a quote. If no quotes are available, note that.
-- tldr: exactly 2 sentences. Both sentences must be FUNNY — dry wit, absurdist, or brutally honest. No corporate-speak.
-- analysis: 3-4 paragraphs focused on the current discourse and vibe, not career summaries. If data is thin, be honest and funny about it.
-- imagePrompt: surreal, absurdist, internet-brain visual capturing the CURRENT energy — chaotic collage, wojak vibes. No text, no words in the image.
+- moodHeadline: punchy, specific, slightly unhinged — captures the current emotional temperature
+- signals: exactly 5 items. Each must be a specific CURRENT thing from the snippets. At least ONE signal must be a direct quote from a REDDIT or FARCASTER source, formatted as: '"[exact quote]" — @username on [platform] ([URL])'. If no quotes available, note it honestly.
+- tldr: exactly 2 sentences. Both FUNNY — dry wit, absurdist, or brutally honest. No corporate-speak.
+- analysis: 3-4 paragraphs on the current discourse and vibe. If data is thin, be honest and funny about it.
+- imagePrompt: surreal, absurdist, internet-brain visual — chaotic collage, wojak vibes. No text, no words in the image.
 
 Output valid JSON only. No markdown fences. ${confidenceCaveat}`;
 
   const userPrompt = `Group/Topic: "${groupName}"
 
-Current web signals (past 24-48 hours):
-${snippets.join("\n")}
+Current signals (past 24-48 hours) with sources:
+${snippetText}
 
 Return JSON:
 {
   "moodHeadline": "current vibe right now",
-  "signals": ["signal 1", "signal 2", "signal 3", "signal 4 — include direct quote if available: 'quoted text here' — https://source.url", "signal 5"],
+  "signals": ["signal 1", "signal 2", "signal 3", "signal 4", "\\"direct quote\\" — @user on Reddit/Farcaster (https://url)"],
   "tldr": "Funny sentence 1. Funny sentence 2.",
   "analysis": "3-4 paragraphs on the current discourse",
   "imagePrompt": "surreal absurdist scene, no text"
@@ -203,7 +288,7 @@ Return JSON:
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
     body: JSON.stringify({
-      model: "gpt-4o",
+      model: "gpt-4o-mini",
       messages: [{ role: "system", content: systemPrompt }, { role: "user", content: userPrompt }],
       response_format: { type: "json_object" },
       temperature: 0.9,
