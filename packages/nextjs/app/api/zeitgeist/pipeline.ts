@@ -46,7 +46,10 @@ async function verifyQueryPaid(
   expectedGroupName: string,
 ): Promise<{ isClawd: boolean } | null> {
   const alchemyKey = process.env.ALCHEMY_API_KEY;
-  if (!alchemyKey) throw new Error("ALCHEMY_API_KEY not configured");
+  // Use Alchemy if available, otherwise fall back to Coinbase's public Base RPC
+  const rpcUrl = alchemyKey
+    ? `https://base-mainnet.g.alchemy.com/v2/${alchemyKey}`
+    : "https://mainnet.base.org";
 
   const usedKey = `used_tx:${txHash.toLowerCase()}`;
   const alreadyUsed = await kv.get(usedKey);
@@ -54,7 +57,7 @@ async function verifyQueryPaid(
 
   const client = createPublicClient({
     chain: base,
-    transport: http(`https://base-mainnet.g.alchemy.com/v2/${alchemyKey}`),
+    transport: http(rpcUrl),
   });
 
   const receipt = await client.getTransactionReceipt({ hash: txHash });
@@ -182,7 +185,6 @@ export async function runZeitgeistPipeline(
   groupName: string,
   ip: string,
 ): Promise<ZeitgeistResult | ZeitgeistError> {
-  // Rate limit
   const allowed = await checkRateLimit(ip);
   if (!allowed) {
     return { error: "Rate limit exceeded. Try again in a minute.", retryAfterMs: 60000 };
@@ -190,26 +192,18 @@ export async function runZeitgeistPipeline(
 
   const key = cacheKey(txHash, groupName);
 
-  // Cache lookup
   const cached = await kv.get<ZeitgeistResult>(key);
   if (cached) return { ...cached, cached: true };
 
-  // Verify on-chain payment
   const verification = await verifyQueryPaid(txHash, groupName);
   if (!verification) {
     return { error: "Could not verify a QueryPaid event for this txHash + groupName on Base mainnet." };
   }
 
-  // Gather signals
   const { snippets, lowConfidence } = await gatherSignals(groupName);
-
-  // Synthesize
   const synthesis = await synthesize(groupName, snippets, lowConfidence);
-
-  // Generate image
   const imageUrl = await generateImage(synthesis.imagePrompt);
 
-  // Build result
   const result: ZeitgeistResult = {
     groupName,
     imageUrl,
@@ -226,4 +220,4 @@ export async function runZeitgeistPipeline(
 
   await kv.set(key, result, { ex: CACHE_TTL_SECONDS });
   return result;
-}
+    }
