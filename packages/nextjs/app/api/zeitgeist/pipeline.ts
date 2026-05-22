@@ -192,23 +192,32 @@ export async function runZeitgeistPipeline(
 ): Promise<ZeitgeistResult | ZeitgeistError> {
   const key = cacheKey(txHash, groupName);
 
+  // Cache lookup FIRST — polling bypasses rate limit
   const cached = await kv.get<ZeitgeistResult>(key);
   if (cached) return { ...cached, cached: true };
 
+  // Rate limit only applies to new (uncached) requests
   const allowed = await checkRateLimit(ip);
   if (!allowed) {
     return { error: "Rate limit exceeded. Try again in a minute.", retryAfterMs: 60000 };
   }
 
+  // Verify on-chain payment
   const verification = await verifyQueryPaid(txHash, groupName);
   if (!verification) {
     return { error: "Could not verify a QueryPaid event for this txHash + groupName on Base mainnet." };
   }
 
+  // Gather signals
   const { snippets, lowConfidence } = await gatherSignals(groupName);
+
+  // Synthesize
   const synthesis = await synthesize(groupName, snippets, lowConfidence);
+
+  // Generate image
   const imageUrl = await generateImage(synthesis.imagePrompt);
 
+  // Build result
   const result: ZeitgeistResult = {
     groupName,
     imageUrl,
