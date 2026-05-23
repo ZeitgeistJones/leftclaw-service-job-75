@@ -315,11 +315,11 @@ ANTI-HALLUCINATION RULE: Only use information actually present in the snippets. 
 
 FOCUS RULE: Every signal must be SPECIFICALLY about "${groupName}". Discard anything about adjacent topics.
 
-SOURCE TYPES: NEWS = breaking articles, WEB = general web, REDDIT = community posts, FARCASTER = crypto social posts, YOUTUBE = video content. Prioritize REDDIT and FARCASTER sources for direct quotes.
+SOURCE TYPES in snippets: NEWS = breaking articles, WEB = general web, REDDIT = community posts, FARCASTER = crypto social posts, YOUTUBE = video content. Use these to find the best quotes and signals, but do NOT include source labels or URLs in the output signals.
 
 Rules:
 - moodHeadline: punchy, specific, slightly unhinged — captures the current emotional temperature
-- signals: exactly 5 items from the snippets. At least ONE must be a direct quote from REDDIT or FARCASTER formatted as: '"[exact quote]" — @username on [platform] ([URL])'. If no quotes available, note it.
+- signals: exactly 5 items from the snippets. Write each signal as a clean, punchy statement — no source labels, no URLs, no "(source: X)" annotations. At least one signal should include a direct quote from the actual text if available, formatted naturally as: '"[quote]" — someone on [platform]'. Keep it clean and readable.
 - tldr: exactly 2 sentences. Both FUNNY — dry wit, absurdist, or brutally honest. No corporate-speak.
 - analysis: 3-4 paragraphs on the current discourse. If data is thin, be honest and funny about it.
 - imagePrompt: IMPORTANT — the image must be recognizably about "${groupName}". Start with the specific subject/topic as an anchor, then add surreal/absurdist internet-brain elements. Example for "Knicks fans": "A surreal meme-style scene at Madison Square Garden where [weird absurdist elements]". The viewer should immediately know what the image is about even though it's chaotic and funny. No text, no words in the image.
