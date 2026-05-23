@@ -10,7 +10,6 @@ import {
   useBalance,
   useReadContract,
   useSwitchChain,
-  useWaitForTransactionReceipt,
   useWriteContract,
 } from "wagmi";
 import deployedContracts from "~~/contracts/deployedContracts";
@@ -192,7 +191,7 @@ const Home: NextPage = () => {
           args: [groupName],
         });
       }
-
+      void txHash;
       setPipeline({ status: "loading", txHash });
       openMobileWallet();
 
@@ -325,6 +324,7 @@ const InputPanel = ({
   onSubmit,
   submitting,
 }: any) => {
+  void clawdAllowance; void clawdDecimals; void requiredClawd;
   const submitDisabled =
     !isConnected ||
     onWrongNetwork ||
