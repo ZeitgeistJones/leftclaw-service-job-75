@@ -15,15 +15,15 @@
   name: "vibecheck";
   --color-primary: #38bdf8;
   --color-primary-content: #000000;
-  --color-secondary: #0c1a2e;
-  --color-secondary-content: #38bdf8;
+  --color-secondary: #1e3a5f;
+  --color-secondary-content: #e0f2fe;
   --color-accent: #38bdf8;
   --color-accent-content: #000000;
-  --color-neutral: #38bdf8;
-  --color-neutral-content: #000000;
-  --color-base-100: #0a0f1a;
-  --color-base-200: #060c16;
-  --color-base-300: #030810;
+  --color-neutral: #1e3a5f;
+  --color-neutral-content: #e0f2fe;
+  --color-base-100: #0d1f35;
+  --color-base-200: #071526;
+  --color-base-300: #040e1a;
   --color-base-content: #e0f2fe;
   --color-info: #38bdf8;
   --color-success: #38bdf8;
@@ -49,7 +49,7 @@
 
   body {
     min-height: 100vh;
-    background: #000000;
+    background: #020c18;
   }
 
   h1,
@@ -63,7 +63,7 @@
 
 :root,
 [data-theme] {
-  background: #000000;
+  background: #020c18;
 }
 
 /* CRT scanline overlay */
@@ -77,8 +77,8 @@ body::before {
     0deg,
     transparent,
     transparent 2px,
-    rgba(0, 0, 0, 0.08) 2px,
-    rgba(0, 0, 0, 0.08) 4px
+    rgba(0, 0, 0, 0.06) 2px,
+    rgba(0, 0, 0, 0.06) 4px
   );
 }
 
