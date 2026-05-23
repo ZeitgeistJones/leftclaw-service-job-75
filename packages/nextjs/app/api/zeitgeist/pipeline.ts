@@ -82,6 +82,7 @@ async function generateSearchQueries(groupName: string, apiKey: string): Promise
   braveQueries: string[];
   redditQuery: string;
   farcasterQuery: string;
+  youtubeQuery: string;
 }> {
   const res = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
@@ -94,14 +95,15 @@ async function generateSearchQueries(groupName: string, apiKey: string): Promise
           content: `You generate hyper-targeted search queries to capture the CURRENT MOMENT of discourse around a specific topic, person, or group.
 
 CRITICAL RULES:
-- Queries must target CURRENT discourse and reactions, not background info or history
+- All queries must target CURRENT discourse and reactions, not background info or history
 - braveQueries: 4 web search queries — mix of news, fan reactions, and controversy. Include "today" or "2026" where appropriate.
-- redditQuery: 1 Reddit search query — short, direct, what someone would type in Reddit search to find current threads about this topic
-- farcasterQuery: 1 Farcaster/crypto social query — if the topic is crypto/web3/tech, make it specific to that community's language; otherwise use the topic name directly
+- redditQuery: 1 short Reddit search query — what someone would type in Reddit search to find current threads
+- farcasterQuery: 1 Farcaster/crypto social query — use crypto/web3 terminology if relevant; otherwise use the topic name
+- youtubeQuery: 1 YouTube search query — what someone would search to find recent videos about this topic right now
 - All queries must be laser-focused on EXACTLY the topic asked, not the broader category
 - Avoid queries that return Wikipedia-style summaries
 
-Return JSON with: { "braveQueries": ["q1","q2","q3","q4"], "redditQuery": "q", "farcasterQuery": "q" }. JSON only.`,
+Return JSON: { "braveQueries": ["q1","q2","q3","q4"], "redditQuery": "q", "farcasterQuery": "q", "youtubeQuery": "q" }. JSON only.`,
         },
         {
           role: "user",
@@ -120,11 +122,13 @@ Return JSON with: { "braveQueries": ["q1","q2","q3","q4"], "redditQuery": "q", "
     braveQueries: string[];
     redditQuery: string;
     farcasterQuery: string;
+    youtubeQuery: string;
   };
   return {
     braveQueries: (parsed.braveQueries ?? []).slice(0, 4),
     redditQuery: parsed.redditQuery ?? groupName,
     farcasterQuery: parsed.farcasterQuery ?? groupName,
+    youtubeQuery: parsed.youtubeQuery ?? groupName,
   };
 }
 
@@ -134,7 +138,7 @@ async function gatherSignals(groupName: string, apiKey: string): Promise<{ snipp
   const braveKey = process.env.BRAVE_SEARCH_API_KEY;
   if (!braveKey) throw new Error("BRAVE_SEARCH_API_KEY not configured");
 
-  const { braveQueries, redditQuery, farcasterQuery } = await generateSearchQueries(groupName, apiKey);
+  const { braveQueries, redditQuery, farcasterQuery, youtubeQuery } = await generateSearchQueries(groupName, apiKey);
 
   const snippets: Snippet[] = [];
 
@@ -179,7 +183,7 @@ async function gatherSignals(groupName: string, apiKey: string): Promise<{ snipp
     }
   }
 
-  // 3. Reddit search (real-time community discourse, no API key needed)
+  // 3. Reddit search (real-time community discourse)
   try {
     const redditUrl = `https://www.reddit.com/search.json?q=${encodeURIComponent(redditQuery)}&sort=new&limit=10&t=week`;
     const redditRes = await fetch(redditUrl, {
@@ -187,14 +191,14 @@ async function gatherSignals(groupName: string, apiKey: string): Promise<{ snipp
     });
     if (redditRes.ok) {
       const redditData = (await redditRes.json()) as {
-        data?: { children?: { data: { title: string; selftext: string; url: string; subreddit: string } }[] };
+        data?: { children?: { data: { title: string; selftext: string; url: string; subreddit: string; permalink: string } }[] };
       };
       for (const post of (redditData.data?.children ?? []).slice(0, 8)) {
         const d = post.data;
         const preview = d.selftext ? d.selftext.slice(0, 150) : "";
         snippets.push({
           text: `[Reddit r/${d.subreddit}] ${d.title}${preview ? `: "${preview}"` : ""}`,
-          url: d.url,
+          url: `https://reddit.com${d.permalink}`,
           source: "reddit",
         });
       }
@@ -203,30 +207,82 @@ async function gatherSignals(groupName: string, apiKey: string): Promise<{ snipp
     // Reddit fetch failed, continue without it
   }
 
-  // 4. Farcaster search via Searchcaster (crypto-native discourse)
-  try {
-    const fcUrl = `https://searchcaster.xyz/api/search?text=${encodeURIComponent(farcasterQuery)}&count=8`;
-    const fcRes = await fetch(fcUrl, {
-      headers: { "User-Agent": "zeitgeist-app/1.0" },
-    });
-    if (fcRes.ok) {
-      const fcData = (await fcRes.json()) as {
-        casts?: { body: { data: { text: string }; username: string }; merkleRoot: string }[];
-      };
-      for (const cast of (fcData.casts ?? []).slice(0, 6)) {
-        const text = cast.body?.data?.text ?? "";
-        const user = cast.body?.username ?? "unknown";
-        if (text.length > 10) {
+  // 4. Farcaster search via Neynar (crypto-native discourse)
+  const neynarKey = process.env.NEYNAR_API_KEY;
+  if (neynarKey) {
+    try {
+      const fcUrl = `https://api.neynar.com/v2/farcaster/cast/search?q=${encodeURIComponent(farcasterQuery)}&limit=10`;
+      const fcRes = await fetch(fcUrl, {
+        headers: { "api_key": neynarKey, "Accept": "application/json" },
+      });
+      if (fcRes.ok) {
+        const fcData = (await fcRes.json()) as {
+          result?: { casts?: { text: string; author: { username: string }; hash: string }[] };
+        };
+        for (const cast of (fcData.result?.casts ?? []).slice(0, 6)) {
+          const text = cast.text ?? "";
+          const user = cast.author?.username ?? "unknown";
+          if (text.length > 10) {
+            snippets.push({
+              text: `[Farcaster @${user}]: "${text.slice(0, 200)}"`,
+              url: `https://warpcast.com/${user}/${cast.hash?.slice(0, 10) ?? ""}`,
+              source: "farcaster",
+            });
+          }
+        }
+      }
+    } catch {
+      // Farcaster fetch failed, continue without it
+    }
+  } else {
+    // Fallback to Searchcaster if no Neynar key
+    try {
+      const fcUrl = `https://searchcaster.xyz/api/search?text=${encodeURIComponent(farcasterQuery)}&count=8`;
+      const fcRes = await fetch(fcUrl, { headers: { "User-Agent": "zeitgeist-app/1.0" } });
+      if (fcRes.ok) {
+        const fcData = (await fcRes.json()) as {
+          casts?: { body: { data: { text: string }; username: string }; merkleRoot: string }[];
+        };
+        for (const cast of (fcData.casts ?? []).slice(0, 6)) {
+          const text = cast.body?.data?.text ?? "";
+          const user = cast.body?.username ?? "unknown";
+          if (text.length > 10) {
+            snippets.push({
+              text: `[Farcaster @${user}]: "${text.slice(0, 200)}"`,
+              url: `https://warpcast.com/${user}`,
+              source: "farcaster",
+            });
+          }
+        }
+      }
+    } catch {
+      // Searchcaster also failed
+    }
+  }
+
+  // 5. YouTube video search (video culture, sports, pop culture)
+  const youtubeKey = process.env.YOUTUBE_API_KEY;
+  if (youtubeKey) {
+    try {
+      const ytUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(youtubeQuery)}&type=video&order=date&maxResults=8&publishedAfter=${new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()}&key=${youtubeKey}`;
+      const ytRes = await fetch(ytUrl);
+      if (ytRes.ok) {
+        const ytData = (await ytRes.json()) as {
+          items?: { snippet: { title: string; description: string; channelTitle: string }; id: { videoId: string } }[];
+        };
+        for (const item of (ytData.items ?? []).slice(0, 6)) {
+          const s = item.snippet;
+          const videoId = item.id?.videoId;
           snippets.push({
-            text: `[Farcaster @${user}]: "${text.slice(0, 200)}"`,
-            url: `https://warpcast.com/${user}`,
-            source: "farcaster",
+            text: `[YouTube - ${s.channelTitle}] ${s.title}: ${s.description?.slice(0, 100) ?? ""}`,
+            url: videoId ? `https://youtube.com/watch?v=${videoId}` : "https://youtube.com",
+            source: "youtube",
           });
         }
       }
+    } catch {
+      // YouTube fetch failed, continue without it
     }
-  } catch {
-    // Farcaster fetch failed, continue without it
   }
 
   // Deduplicate and limit
@@ -238,7 +294,7 @@ async function gatherSignals(groupName: string, apiKey: string): Promise<{ snipp
     return true;
   });
 
-  return { snippets: unique.slice(0, 25), lowConfidence: unique.length < 3 };
+  return { snippets: unique.slice(0, 30), lowConfidence: unique.length < 3 };
 }
 
 async function synthesize(
@@ -255,18 +311,18 @@ async function synthesize(
 
   const systemPrompt = `You are a deeply online cultural analyst capturing THE VIBE RIGHT NOW. Your job is to capture what people are CURRENTLY saying, feeling, and arguing about — not historical summaries.
 
-ANTI-HALLUCINATION RULE: Only use information actually present in the snippets. If the snippets contain no information specifically about the queried group, say so honestly with humor — e.g. "The internet has nothing to say about this yet, which is itself a vibe."
+ANTI-HALLUCINATION RULE: Only use information actually present in the snippets. If the snippets contain no information specifically about the queried group, say so honestly with humor.
 
 FOCUS RULE: Every signal must be SPECIFICALLY about "${groupName}". Discard anything about adjacent topics.
 
-SOURCE TYPES in snippets: NEWS = breaking articles, WEB = general web, REDDIT = community posts, FARCASTER = crypto social posts. Prioritize REDDIT and FARCASTER sources for quotes as they contain actual human voices.
+SOURCE TYPES: NEWS = breaking articles, WEB = general web, REDDIT = community posts, FARCASTER = crypto social posts, YOUTUBE = video content. Prioritize REDDIT and FARCASTER sources for direct quotes.
 
 Rules:
 - moodHeadline: punchy, specific, slightly unhinged — captures the current emotional temperature
-- signals: exactly 5 items. Each must be a specific CURRENT thing from the snippets. At least ONE signal must be a direct quote from a REDDIT or FARCASTER source, formatted as: '"[exact quote]" — @username on [platform] ([URL])'. If no quotes available, note it honestly.
+- signals: exactly 5 items from the snippets. At least ONE must be a direct quote from REDDIT or FARCASTER formatted as: '"[exact quote]" — @username on [platform] ([URL])'. If no quotes available, note it.
 - tldr: exactly 2 sentences. Both FUNNY — dry wit, absurdist, or brutally honest. No corporate-speak.
-- analysis: 3-4 paragraphs on the current discourse and vibe. If data is thin, be honest and funny about it.
-- imagePrompt: surreal, absurdist, internet-brain visual — chaotic collage, wojak vibes. No text, no words in the image.
+- analysis: 3-4 paragraphs on the current discourse. If data is thin, be honest and funny about it.
+- imagePrompt: IMPORTANT — the image must be recognizably about "${groupName}". Start with the specific subject/topic as an anchor, then add surreal/absurdist internet-brain elements. Example for "Knicks fans": "A surreal meme-style scene at Madison Square Garden where [weird absurdist elements]". The viewer should immediately know what the image is about even though it's chaotic and funny. No text, no words in the image.
 
 Output valid JSON only. No markdown fences. ${confidenceCaveat}`;
 
@@ -281,7 +337,7 @@ Return JSON:
   "signals": ["signal 1", "signal 2", "signal 3", "signal 4", "\\"direct quote\\" — @user on Reddit/Farcaster (https://url)"],
   "tldr": "Funny sentence 1. Funny sentence 2.",
   "analysis": "3-4 paragraphs on the current discourse",
-  "imagePrompt": "surreal absurdist scene, no text"
+  "imagePrompt": "Start with '${groupName} themed surreal scene:' then describe the absurdist elements. No text in image."
 }`;
 
   const res = await fetch("https://api.openai.com/v1/chat/completions", {
