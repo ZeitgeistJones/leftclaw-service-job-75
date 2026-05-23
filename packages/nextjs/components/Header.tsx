@@ -1,6 +1,5 @@
 "use client";
 
-import React, { useRef } from "react";
 import { hardhat } from "viem/chains";
 import { FaucetButton, RainbowKitCustomConnectButton } from "~~/components/scaffold-eth";
 import { useTargetNetwork } from "~~/hooks/scaffold-eth";
