@@ -16,13 +16,8 @@ type HeaderMenuLink = {
 
 export const menuLinks: HeaderMenuLink[] = [
   {
-    label: "Zeitgeist",
+    label: "VibeCheck",
     href: "/",
-  },
-  {
-    label: "Debug",
-    href: "/debug",
-    icon: <BugAntIcon className="h-4 w-4" />,
   },
 ];
 
@@ -81,10 +76,10 @@ export const Header = () => {
           </ul>
         </details>
         <Link href="/" passHref className="hidden lg:flex items-center gap-2 ml-4 mr-6 shrink-0">
-          <div className="flex items-center justify-center w-10 h-10 text-2xl">🔮</div>
+          <div className="flex items-center justify-center w-10 h-10 text-2xl">📡</div>
           <div className="flex flex-col">
-            <span className="font-bold leading-tight">Zeitgeist</span>
-            <span className="text-xs opacity-70">Cultural snapshots, on demand</span>
+            <span className="font-bold leading-tight">VibeCheck</span>
+            <span className="text-xs opacity-70">diagnosing the collective unconscious since today</span>
           </div>
         </Link>
         <ul className="hidden lg:flex lg:flex-nowrap menu menu-horizontal px-1 gap-2">
