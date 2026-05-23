@@ -1,4 +1,4 @@
-"use client";
+"use strict";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
@@ -66,8 +66,6 @@ const isMobileDevice = (): boolean => {
 
 const openMobileWallet = (): void => {
   if (!isMobileDevice()) return;
-  // Best-effort: re-focus the most recent connected wallet via WalletConnect's
-  // last-used deeplink. RainbowKit stores this; if not available, no-op.
   try {
     const lastUsed =
       typeof window !== "undefined" && window.localStorage
@@ -98,285 +96,154 @@ const Home: NextPage = () => {
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const approveFailsafeRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const clearApproveFailsafe = useCallback(() => {
-    if (approveFailsafeRef.current) {
-      clearTimeout(approveFailsafeRef.current);
-      approveFailsafeRef.current = null;
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
+
+  useEffect(() => {
+    if (pipeline.status === "loading") {
+      const t = setInterval(() => {
+        setLoadingTextIndex(prev => (prev + 1) % LOADING_STATES.length);
+      }, 3000);
+      return () => clearInterval(t);
     }
-  }, []);
-
-  // cleanup on unmount
-  useEffect(() => {
-    return () => {
-      if (approveFailsafeRef.current) {
-        clearTimeout(approveFailsafeRef.current);
-        approveFailsafeRef.current = null;
-      }
-    };
-  }, []);
-
-  // ------- Reads -------
-  const { data: ethRequiredWei } = useScaffoldReadContract({
-    contractName: "ZeitgeistPayment",
-    functionName: "ethRequired",
-    watch: true,
-  });
-
-  const { data: queryPriceClawd } = useScaffoldReadContract({
-    contractName: "ZeitgeistPayment",
-    functionName: "queryPriceCLAWD",
-  });
-
-  const { data: ethBalanceData } = useBalance({
-    address: connectedAddress,
-    chainId: base.id,
-    query: { enabled: Boolean(connectedAddress) },
-  });
-
-  const { data: clawdBalanceRaw, refetch: refetchClawdBalance } = useReadContract({
-    abi: CLAWD_ABI,
-    address: CLAWD_ADDRESS,
-    chainId: base.id,
-    functionName: "balanceOf",
-    args: connectedAddress ? [connectedAddress] : undefined,
-    query: { enabled: Boolean(connectedAddress) },
-  });
-
-  const { data: clawdAllowanceRaw, refetch: refetchClawdAllowance } = useReadContract({
-    abi: CLAWD_ABI,
-    address: CLAWD_ADDRESS,
-    chainId: base.id,
-    functionName: "allowance",
-    args: connectedAddress ? [connectedAddress, ZEITGEIST_PAYMENT_ADDRESS] : undefined,
-    query: { enabled: Boolean(connectedAddress) },
-  });
-
-  const { data: clawdDecimalsRaw } = useReadContract({
-    abi: CLAWD_ABI,
-    address: CLAWD_ADDRESS,
-    chainId: base.id,
-    functionName: "decimals",
-  });
-
-  const clawdDecimals = clawdDecimalsRaw !== undefined ? Number(clawdDecimalsRaw) : 18;
-  const clawdBalance = (clawdBalanceRaw as bigint | undefined) ?? 0n;
-  const clawdAllowance = (clawdAllowanceRaw as bigint | undefined) ?? 0n;
-  const requiredClawd = (queryPriceClawd as bigint | undefined) ?? 0n;
-  const requiredEth = (ethRequiredWei as bigint | undefined) ?? 0n;
-
-  const ethBalance = ethBalanceData?.value ?? 0n;
-
-  const needsApproval = paymentMode === "CLAWD" && requiredClawd > 0n && clawdAllowance < requiredClawd;
-
-  const insufficientFunds = useMemo(() => {
-    if (paymentMode === "ETH") return requiredEth > 0n && ethBalance < requiredEth;
-    return requiredClawd > 0n && clawdBalance < requiredClawd;
-  }, [paymentMode, requiredEth, ethBalance, requiredClawd, clawdBalance]);
-
-  // ------- Writes -------
-  const { writeContractAsync: approveClawd } = useWriteContract();
-  const { writeContractAsync: writeQuery, isMining } = useScaffoldWriteContract({
-    contractName: "ZeitgeistPayment",
-  });
-
-  // Approve cooldown timer
-  useEffect(() => {
-    if (approveCooldownUntil <= 0) return;
-    const id = setInterval(() => setNow(Date.now()), 250);
-    return () => clearInterval(id);
-  }, [approveCooldownUntil]);
-
-  const inApproveCooldown = approveCooldownUntil > now;
-
-  // Loading text rotation
-  useEffect(() => {
-    if (pipeline.status !== "loading") return;
-    const id = setInterval(() => {
-      setLoadingTextIndex(i => (i + 1) % LOADING_STATES.length);
-    }, 2_000);
-    return () => clearInterval(id);
   }, [pipeline.status]);
 
-  // Result polling
-  useEffect(() => {
-    if (pipeline.status !== "loading") {
-      if (pollIntervalRef.current) {
-        clearInterval(pollIntervalRef.current);
-        pollIntervalRef.current = null;
-      }
-      return;
-    }
-    const apiBase = process.env.NEXT_PUBLIC_API_URL || "";
-    const url = `${apiBase}/api/zeitgeist?txHash=${pipeline.txHash}&groupName=${encodeURIComponent(groupName)}`;
-    let cancelled = false;
-
-    const poll = async () => {
-      try {
-        const res = await fetch(url, { cache: "no-store" });
-        if (cancelled) return;
-        if (res.ok) {
-          const data = (await res.json()) as ZeitgeistResult;
-          setPipeline({ status: "result", result: data });
-          return;
-        }
-        if (res.status === 503) {
-          const body = (await res.json()) as { error?: string };
-          setPipeline({
-            status: "error",
-            message:
-              body.error || "Backend not configured. The on-chain payment succeeded; the analysis service is offline.",
-          });
-        }
-        // any other status: keep polling silently — backend may still be working
-      } catch {
-        // network blip — keep polling
-      }
-    };
-
-    poll();
-    pollIntervalRef.current = setInterval(poll, POLL_INTERVAL_MS);
-    return () => {
-      cancelled = true;
-      if (pollIntervalRef.current) {
-        clearInterval(pollIntervalRef.current);
-        pollIntervalRef.current = null;
-      }
-    };
-  }, [pipeline, groupName]);
-
-  // ------- Handlers -------
-  const handleApprove = useCallback(async () => {
-    if (!connectedAddress || needsApproval === false) return;
-    setApproveSubmitting(true);
-    // Failsafe: if the receipt is never observed (tx dropped, indexer lag,
-    // wallet closed before signing), still re-enable the button after 60s
-    // so the user is never stuck.
-    clearApproveFailsafe();
-    approveFailsafeRef.current = setTimeout(() => {
-      setApproveSubmitting(false);
-      approveFailsafeRef.current = null;
-    }, 60_000);
-    try {
-      const hash = await approveClawd({
-        abi: CLAWD_ABI,
-        address: CLAWD_ADDRESS,
-        chainId: base.id,
-        functionName: "approve",
-        args: [ZEITGEIST_PAYMENT_ADDRESS, requiredClawd],
-      });
-      // start mobile deep-link after a short delay so the wallet has time to surface
-      setTimeout(openMobileWallet, 2_000);
-      notification.success("Approval submitted. Waiting for confirmation...");
-      // don't drop the cooldown until we observe receipt — handled below via useWaitFor
-      setPendingApproveTx(hash);
-    } catch (err) {
-      const parsed = getParsedErrorWithAllAbis(err, base.id);
-      notification.error(parsed);
-      clearApproveFailsafe();
-      setApproveSubmitting(false);
-    }
-  }, [approveClawd, clearApproveFailsafe, connectedAddress, needsApproval, requiredClawd]);
-
-  const [pendingApproveTx, setPendingApproveTx] = useState<`0x${string}` | undefined>();
-  const { data: approveReceipt } = useWaitForTransactionReceipt({
-    hash: pendingApproveTx,
-    chainId: base.id,
-    query: { enabled: Boolean(pendingApproveTx) },
+  const { data: ethBalance } = useBalance({
+    address: connectedAddress,
   });
 
-  useEffect(() => {
-    if (!approveReceipt) return;
-    clearApproveFailsafe();
-    setApproveSubmitting(false);
-    setApproveCooldownUntil(Date.now() + APPROVE_COOLDOWN_MS);
-    refetchClawdAllowance();
-    notification.success("CLAWD approved.");
-    setPendingApproveTx(undefined);
-  }, [approveReceipt, clearApproveFailsafe, refetchClawdAllowance]);
+  const { data: clawdBalance } = useBalance({
+    address: connectedAddress,
+    token: CLAWD_ADDRESS,
+  });
 
-  const handleSubmit = useCallback(async () => {
-    if (!connectedAddress) return;
-    if (!groupName.trim()) {
-      notification.error("Type a cultural group first.");
-      return;
+  const { data: requiredEth } = useScaffoldReadContract({
+    contractName: "ZeitgeistPayment",
+    functionName: "requiredEth",
+  });
+
+  const { data: requiredClawd } = useScaffoldReadContract({
+    contractName: "ZeitgeistPayment",
+    functionName: "requiredClawd",
+  });
+
+  const { data: clawdAllowance } = useReadContract({
+    address: CLAWD_ADDRESS,
+    abi: CLAWD_ABI,
+    functionName: "allowance",
+    args: [connectedAddress as AddressType, ZEITGEIST_PAYMENT_ADDRESS],
+    query: {
+      enabled: !!connectedAddress && paymentMode === "CLAWD",
+    },
+  });
+
+  const { writeContractAsync: writeApprove } = useWriteContract();
+  const { writeContractAsync: writePayment } = useScaffoldWriteContract("ZeitgeistPayment");
+
+  const ethRequiredFormatted = requiredEth ? formatEther(requiredEth) : "0.00012";
+  const clawdRequiredFormatted = requiredClawd ? formatUnits(requiredClawd, 18) : "5000";
+  const ethBalanceFormatted = ethBalance ? Number(formatEther(ethBalance.value)).toFixed(4) : "0.0000";
+  const clawdBalanceFormatted = clawdBalance ? Number(formatUnits(clawdBalance.value, 18)).toLocaleString() : "0";
+
+  const insufficientFunds = useMemo(() => {
+    if (!isConnected || onWrongNetwork) return false;
+    if (paymentMode === "ETH") {
+      return ethBalance ? ethBalance.value < (requiredEth ?? 0n) : true;
+    } else {
+      return clawdBalance ? clawdBalance.value < (requiredClawd ?? 0n) : true;
     }
-    if (onWrongNetwork) {
-      notification.error("Switch to Base first.");
-      return;
-    }
-    if (insufficientFunds) {
-      notification.error(`Not enough ${paymentMode} for the query.`);
-      return;
-    }
-    setPipeline({ status: "submitting" });
+  }, [isConnected, onWrongNetwork, paymentMode, ethBalance, requiredEth, clawdBalance, requiredClawd]);
+
+  const needsApproval = useMemo(() => {
+    if (paymentMode !== "CLAWD" || !requiredClawd) return false;
+    return (clawdAllowance ?? 0n) < requiredClawd;
+  }, [paymentMode, clawdAllowance, requiredClawd]);
+
+  const pollResult = useCallback(async (txHash: `0x${string}`) => {
     try {
-      let txHash: `0x${string}` | undefined;
-      if (paymentMode === "ETH") {
-        // Send 1% over the quoted price as a slippage buffer; contract refunds excess
-        const value = (requiredEth * 101n) / 100n;
-        txHash = (await writeQuery({
-          functionName: "queryETH",
-          args: [groupName.trim()],
-          value,
-        })) as `0x${string}` | undefined;
-      } else {
-        txHash = (await writeQuery({
-          functionName: "queryCLAWD",
-          args: [groupName.trim(), requiredClawd],
-        })) as `0x${string}` | undefined;
+      const res = await fetch(`/api/zeitgeist?txHash=${txHash}`);
+      if (res.status === 200) {
+        const data = await res.json();
+        setPipeline({ status: "result", result: data });
+        if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
       }
-      setTimeout(openMobileWallet, 2_000);
-      if (!txHash) {
-        setPipeline({ status: "input" });
-        return;
-      }
-      setPipeline({ status: "loading", txHash });
-      // refresh balances after the write resolves
-      refetchClawdBalance();
-      refetchClawdAllowance();
-    } catch (err) {
-      const parsed = getParsedErrorWithAllAbis(err, base.id);
-      notification.error(parsed);
-      setPipeline({ status: "input" });
+    } catch (e) {
+      console.error("Poll error", e);
     }
-  }, [
-    connectedAddress,
-    groupName,
-    insufficientFunds,
-    onWrongNetwork,
-    paymentMode,
-    refetchClawdAllowance,
-    refetchClawdBalance,
-    requiredClawd,
-    requiredEth,
-    writeQuery,
-  ]);
-
-  const reset = useCallback(() => {
-    setPipeline({ status: "input" });
-    setGroupName("");
-    setLoadingTextIndex(0);
   }, []);
 
-  // ------- Render helpers -------
-  const formattedEthRequired = requiredEth > 0n ? Number(formatEther(requiredEth)).toFixed(6) : "—";
-  const formattedClawdRequired =
-    requiredClawd > 0n ? Number(formatUnits(requiredClawd, clawdDecimals)).toLocaleString() : "—";
-  const formattedEthBalance = Number(formatEther(ethBalance)).toFixed(4);
-  const formattedClawdBalance = Number(formatUnits(clawdBalance, clawdDecimals)).toLocaleString();
+  const onSubmit = async () => {
+    if (!groupName.trim()) return;
+    setPipeline({ status: "submitting" });
+
+    try {
+      let txHash: `0x${string}`;
+      if (paymentMode === "ETH") {
+        txHash = await writePayment({
+          functionName: "queryETH",
+          args: [groupName],
+          value: requiredEth,
+        });
+      } else {
+        txHash = await writePayment({
+          functionName: "queryCLAWD",
+          args: [groupName],
+        });
+      }
+
+      setPipeline({ status: "loading", txHash });
+      openMobileWallet();
+
+      pollIntervalRef.current = setInterval(() => pollResult(txHash), POLL_INTERVAL_MS);
+    } catch (e: any) {
+      console.error(e);
+      const message = getParsedErrorWithAllAbis(e);
+      notification.error(message);
+      setPipeline({ status: "input" });
+    }
+  };
+
+  const onApprove = async () => {
+    if (!requiredClawd) return;
+    setApproveSubmitting(true);
+    try {
+      const txHash = await writeApprove({
+        address: CLAWD_ADDRESS,
+        abi: CLAWD_ABI,
+        functionName: "approve",
+        args: [ZEITGEIST_PAYMENT_ADDRESS, requiredClawd * 100n],
+      });
+      notification.success("Approval transaction sent");
+      setApproveCooldownUntil(Date.now() + APPROVE_COOLDOWN_MS);
+      approveFailsafeRef.current = setTimeout(() => setApproveSubmitting(false), 15000);
+    } catch (e: any) {
+      console.error(e);
+      notification.error(getParsedErrorWithAllAbis(e));
+      setApproveSubmitting(false);
+    }
+  };
+
+  const inApproveCooldown = now < approveCooldownUntil;
+  const approveSecondsLeft = Math.ceil((approveCooldownUntil - now) / 1000);
 
   return (
-    <div className="font-sans flex flex-col items-center grow w-full px-4 pt-10 pb-24">
-      <div className="w-full max-w-2xl">
-        <header className="mb-10 text-center">
-          <div className="text-6xl mb-4">📡</div>
-          <h1 className="font-display text-5xl font-bold tracking-tight mb-3">VibeCheck</h1>
-          <p className="text-lg opacity-80 max-w-xl mx-auto">
-            Diagnosing the collective unconscious since today.
-          </p>
-        </header>
+    <div className="flex items-center flex-col flex-grow pt-4 pb-12 px-4 font-serif">
+      <div className="flex flex-col items-center text-center max-w-2xl w-full">
+        <div className="mb-2">
+          <Image src="/home/ubuntu/clawd_icon_blue.png" alt="📡" width={64} height={64} className="opacity-90" />
+        </div>
+        <h1 className="text-7xl font-black tracking-tighter text-white mb-0 italic">VibeCheck</h1>
+        <div className="w-full h-1 bg-gradient-to-r from-transparent via-primary to-transparent mt-2 mb-1 opacity-50"></div>
+        <div className="w-full h-0.5 bg-gradient-to-r from-transparent via-primary to-transparent mb-1 opacity-30"></div>
+        <div className="w-full h-px bg-gradient-to-r from-transparent via-primary to-transparent mb-4 opacity-20"></div>
+        
+        <p className="text-lg opacity-80 mb-6 italic">
+          Diagnosing the collective unconscious since today.
+        </p>
 
-        <section className="card bg-base-100 border border-base-300 shadow-center p-6 sm:p-8">
+        <section className="bg-base-100 border border-primary/30 rounded-sm p-8 w-full shadow-2xl shadow-primary/5">
           {pipeline.status === "input" || pipeline.status === "submitting" ? (
             <InputPanel
               groupName={groupName}
@@ -385,103 +252,52 @@ const Home: NextPage = () => {
               setPaymentMode={setPaymentMode}
               isConnected={isConnected}
               onWrongNetwork={onWrongNetwork}
-              onSwitchChain={() => switchChain({ chainId: base.id })}
+              onSwitchChain={() => switchChain?.({ chainId: base.id })}
               isSwitchingChain={isSwitchingChain}
-              ethRequiredFormatted={formattedEthRequired}
-              clawdRequiredFormatted={formattedClawdRequired}
-              ethBalanceFormatted={formattedEthBalance}
-              clawdBalanceFormatted={formattedClawdBalance}
+              ethRequiredFormatted={ethRequiredFormatted}
+              clawdRequiredFormatted={clawdRequiredFormatted}
+              ethBalanceFormatted={ethBalanceFormatted}
+              clawdBalanceFormatted={clawdBalanceFormatted}
               insufficientFunds={insufficientFunds}
               needsApproval={needsApproval}
-              clawdAllowance={clawdAllowance}
-              clawdDecimals={clawdDecimals}
-              requiredClawd={requiredClawd}
-              onApprove={handleApprove}
+              clawdAllowance={clawdAllowance ?? 0n}
+              clawdDecimals={18}
+              requiredClawd={requiredClawd ?? 0n}
+              onApprove={onApprove}
               approveSubmitting={approveSubmitting}
               inApproveCooldown={inApproveCooldown}
-              approveSecondsLeft={Math.max(0, Math.ceil((approveCooldownUntil - now) / 1000))}
-              onSubmit={handleSubmit}
-              submitting={pipeline.status === "submitting" || isMining}
+              approveSecondsLeft={approveSecondsLeft}
+              onSubmit={onSubmit}
+              submitting={pipeline.status === "submitting"}
             />
-          ) : null}
-
-          {pipeline.status === "loading" ? (
+          ) : pipeline.status === "loading" ? (
             <LoadingPanel
               groupName={groupName}
               loadingText={LOADING_STATES[loadingTextIndex]}
               txHash={pipeline.txHash}
             />
-          ) : null}
-
-          {pipeline.status === "result" ? <ResultPanel result={pipeline.result} onReset={reset} /> : null}
-
-          {pipeline.status === "error" ? (
-            <div className="space-y-4">
-              <div className="alert alert-error">
-                <span>{pipeline.message}</span>
-              </div>
-              <button className="btn btn-primary w-full" onClick={reset}>
-                Back to start
-              </button>
-            </div>
+          ) : pipeline.status === "result" ? (
+            <ResultPanel result={pipeline.result} onReset={() => setPipeline({ status: "input" })} />
           ) : null}
         </section>
 
-        <section className="mt-8 text-center text-xs opacity-60">
-          <p>
-            Contract:{" "}
-            <a
-              href={`https://basescan.org/address/${ZEITGEIST_PAYMENT_ADDRESS}`}
-              target="_blank"
-              rel="noreferrer"
-              className="underline underline-offset-2 hover:opacity-100"
-            >
-              {ZEITGEIST_PAYMENT_ADDRESS.slice(0, 6)}...{ZEITGEIST_PAYMENT_ADDRESS.slice(-4)}
+        <div className="mt-8 flex flex-col items-center gap-2 text-xs opacity-40 font-mono">
+          <div className="flex gap-4">
+            <a href={`https://basescan.org/address/${ZEITGEIST_PAYMENT_ADDRESS}`} target="_blank" rel="noreferrer" className="hover:text-primary transition-colors">
+              Contract: {ZEITGEIST_PAYMENT_ADDRESS.slice(0,6)}...{ZEITGEIST_PAYMENT_ADDRESS.slice(-4)}
             </a>
-          </p>
-          <p className="mt-1">
-            CLAWD:{" "}
-            <a
-              href={`https://basescan.org/address/${CLAWD_ADDRESS}`}
-              target="_blank"
-              rel="noreferrer"
-              className="underline underline-offset-2 hover:opacity-100"
-            >
-              {CLAWD_ADDRESS.slice(0, 6)}...{CLAWD_ADDRESS.slice(-4)}
+            <a href={`https://basescan.org/address/${CLAWD_ADDRESS}`} target="_blank" rel="noreferrer" className="hover:text-primary transition-colors">
+              CLAWD: {CLAWD_ADDRESS.slice(0,6)}...{CLAWD_ADDRESS.slice(-4)}
             </a>
-          </p>
-        </section>
+          </div>
+          <div className="flex items-center gap-2 mt-4">
+            <span className="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
+            <span>VIBECHECK v1.0.0 / CONSCIOUSNESS NETWORK ONLINE</span>
+          </div>
+        </div>
       </div>
     </div>
   );
-};
-
-// ---------- Sub-panels ----------
-
-type InputPanelProps = {
-  groupName: string;
-  setGroupName: (v: string) => void;
-  paymentMode: PaymentMode;
-  setPaymentMode: (m: PaymentMode) => void;
-  isConnected: boolean;
-  onWrongNetwork: boolean;
-  onSwitchChain: () => void;
-  isSwitchingChain: boolean;
-  ethRequiredFormatted: string;
-  clawdRequiredFormatted: string;
-  ethBalanceFormatted: string;
-  clawdBalanceFormatted: string;
-  insufficientFunds: boolean;
-  needsApproval: boolean;
-  clawdAllowance: bigint;
-  clawdDecimals: number;
-  requiredClawd: bigint;
-  onApprove: () => void;
-  approveSubmitting: boolean;
-  inApproveCooldown: boolean;
-  approveSecondsLeft: number;
-  onSubmit: () => void;
-  submitting: boolean;
 };
 
 const InputPanel = ({
@@ -508,7 +324,7 @@ const InputPanel = ({
   approveSecondsLeft,
   onSubmit,
   submitting,
-}: InputPanelProps) => {
+}: any) => {
   const submitDisabled =
     !isConnected ||
     onWrongNetwork ||
@@ -518,215 +334,160 @@ const InputPanel = ({
     (paymentMode === "CLAWD" && (needsApproval || approveSubmitting || inApproveCooldown));
 
   return (
-    <div className="space-y-6">
-      <label className="block">
-        <p className="text-xl font-semibold text-center mb-3 opacity-90">Check the vibe of...</p>
+    <div className="space-y-8">
+      <div className="text-center">
+        <h2 className="text-3xl font-bold mb-4 text-white">Check the vibe of...</h2>
         <input
           type="text"
           value={groupName}
           onChange={e => setGroupName(e.target.value)}
           placeholder='e.g. "farcaster maxis", "doomer programmers", "finance bros"'
           maxLength={120}
-          className="input input-bordered w-full mt-2 font-display text-lg"
+          className="input input-bordered w-full bg-black/40 border-primary/20 focus:border-primary/60 text-center text-xl h-16 rounded-none font-mono"
         />
+      </div>
 
-      </label>
-
-      <div>
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-sm font-medium opacity-70">Pay with</span>
-          <span className="text-xs opacity-60">5,000 CLAWD or ~$0.25 ETH per query</span>
+      <div className="pt-4">
+        <div className="flex items-center justify-between mb-3 px-1">
+          <span className="text-xs uppercase tracking-widest opacity-60">Transmission Fee</span>
+          <span className="text-xs opacity-60 font-mono">5,000 CLAWD / ~$0.25 ETH</span>
         </div>
-        <div className="join w-full">
+        <div className="join w-full rounded-none border border-primary/20">
           <button
             type="button"
-            className={`btn join-item flex-1 ${paymentMode === "ETH" ? "btn-primary" : "btn-outline"}`}
+            className={`btn join-item flex-1 rounded-none border-none ${paymentMode === "ETH" ? "bg-primary text-black" : "bg-transparent text-primary/60 hover:bg-primary/10"}`}
             onClick={() => setPaymentMode("ETH")}
           >
             ETH
           </button>
           <button
             type="button"
-            className={`btn join-item flex-1 ${paymentMode === "CLAWD" ? "btn-primary" : "btn-outline"}`}
+            className={`btn join-item flex-1 rounded-none border-none flex items-center justify-center gap-2 ${paymentMode === "CLAWD" ? "bg-primary text-black" : "bg-transparent text-primary/60 hover:bg-primary/10"}`}
             onClick={() => setPaymentMode("CLAWD")}
           >
+            <Image src="/home/ubuntu/clawd_icon_blue.png" alt="" width={18} height={18} className={paymentMode === "CLAWD" ? "invert" : ""} />
             CLAWD
           </button>
         </div>
-        <div className="mt-3 flex items-center justify-between text-sm">
-          <span className="opacity-70">
-            {paymentMode === "ETH" ? (
-              <>
-                ~<span className="font-mono">{ethRequiredFormatted}</span> ETH (~$0.25)
-              </>
-            ) : (
-              <>
-                <span className="font-mono">{clawdRequiredFormatted}</span> CLAWD
-              </>
-            )}
+        <div className="mt-4 flex items-center justify-between text-xs font-mono opacity-60 px-1">
+          <span>
+            {paymentMode === "ETH" ? `~${ethRequiredFormatted} ETH` : `${clawdRequiredFormatted} CLAWD`}
           </span>
-          <span className="opacity-60 text-xs">
-            Bal:{" "}
-            <span className="font-mono">
-              {paymentMode === "ETH" ? `${ethBalanceFormatted} ETH` : `${clawdBalanceFormatted} CLAWD`}
-            </span>
+          <span>
+            Bal: {paymentMode === "ETH" ? `${ethBalanceFormatted} ETH` : `${clawdBalanceFormatted} CLAWD`}
           </span>
         </div>
-        {paymentMode === "CLAWD" && requiredClawd > 0n ? (
-          <p className="mt-2 text-xs opacity-60">
-            Allowance:{" "}
-            <span className="font-mono">{Number(formatUnits(clawdAllowance, clawdDecimals)).toLocaleString()}</span>{" "}
-            CLAWD {clawdAllowance >= requiredClawd ? "✓" : "(needs approval)"}
-          </p>
-        ) : null}
       </div>
 
-      {!isConnected ? (
-        <div className="alert">
-          <span>Connect your wallet to continue.</span>
-        </div>
-      ) : onWrongNetwork ? (
-        <button type="button" className="btn btn-warning w-full" onClick={onSwitchChain} disabled={isSwitchingChain}>
-          {isSwitchingChain ? "Switching…" : "Switch to Base"}
-        </button>
-      ) : paymentMode === "CLAWD" && needsApproval ? (
-        <button
-          type="button"
-          className="btn btn-secondary w-full"
-          onClick={onApprove}
-          disabled={approveSubmitting || inApproveCooldown || insufficientFunds}
-        >
-          {approveSubmitting
-            ? "Approving…"
-            : inApproveCooldown
-              ? `Approving… ready in ${approveSecondsLeft}s`
-              : `Approve ${Number(formatUnits(requiredClawd, clawdDecimals)).toLocaleString()} CLAWD`}
-        </button>
-      ) : (
-        <button type="button" className="btn btn-primary w-full" onClick={onSubmit} disabled={submitDisabled}>
-          {submitting
-            ? "Sending…"
-            : insufficientFunds
-              ? `Insufficient ${paymentMode}`
-              : !groupName.trim()
-                ? "Type a group name"
-                : `Generate snapshot (~$0.25)`}
-        </button>
-      )}
+      <div className="pt-4">
+        {!isConnected ? (
+          <div className="p-4 border border-dashed border-primary/30 text-center text-sm opacity-60">
+            Connect wallet to transmit
+          </div>
+        ) : onWrongNetwork ? (
+          <button type="button" className="btn btn-warning w-full rounded-none" onClick={onSwitchChain} disabled={isSwitchingChain}>
+            {isSwitchingChain ? "Switching…" : "Switch to Base"}
+          </button>
+        ) : paymentMode === "CLAWD" && needsApproval ? (
+          <button
+            type="button"
+            className="btn bg-primary text-black hover:bg-primary/80 w-full rounded-none border-none"
+            onClick={onApprove}
+            disabled={approveSubmitting || inApproveCooldown || insufficientFunds}
+          >
+            {approveSubmitting
+              ? "Approving…"
+              : inApproveCooldown
+                ? `Ready in ${approveSecondsLeft}s`
+                : `Approve CLAWD`}
+          </button>
+        ) : (
+          <button type="button" className="btn bg-primary text-black hover:bg-primary/80 w-full rounded-none border-none text-lg h-16" onClick={onSubmit} disabled={submitDisabled}>
+            {submitting
+              ? "Transmitting..."
+              : insufficientFunds
+                ? `Insufficient ${paymentMode}`
+                : !groupName.trim()
+                  ? "Input target"
+                  : `Check Vibe →`}
+          </button>
+        )}
+      </div>
 
-      <p className="text-xs text-center opacity-50">
-        Each query hits live signals from Reddit, Farcaster, YouTube, and the web — synthesized in real time. Results are cached for 24h so repeat queries are free.
+      <p className="text-[10px] text-center opacity-40 leading-relaxed font-mono uppercase tracking-tighter">
+        Real-time synthesis from Reddit, Farcaster, YouTube, and the web. Results cached for 24h.
       </p>
     </div>
   );
 };
 
-const LoadingPanel = ({
-  groupName,
-  loadingText,
-  txHash,
-}: {
-  groupName: string;
-  loadingText: string;
-  txHash: `0x${string}`;
-}) => {
-  return (
-    <div className="space-y-6 text-center py-8">
-      <div className="text-5xl animate-pulse">🔮</div>
-      <div>
-        <p className="text-sm opacity-60">Generating snapshot of</p>
-        <p className="text-2xl font-display font-bold mt-1">{groupName}</p>
-      </div>
-      <p className="text-base opacity-80">{loadingText}</p>
-      <a
-        href={`https://basescan.org/tx/${txHash}`}
-        target="_blank"
-        rel="noreferrer"
-        className="link text-xs opacity-60"
-      >
-        View payment on Basescan ↗
-      </a>
-      <progress className="progress progress-primary w-full" />
+const LoadingPanel = ({ groupName, loadingText, txHash }: any) => (
+  <div className="space-y-8 text-center py-12 font-mono">
+    <div className="text-6xl animate-pulse text-primary">📡</div>
+    <div>
+      <p className="text-xs opacity-40 uppercase tracking-widest">Diagnosing</p>
+      <p className="text-3xl font-bold mt-2 text-white italic">"{groupName}"</p>
     </div>
-  );
-};
+    <p className="text-sm text-primary animate-pulse">{loadingText}</p>
+    <div className="w-full bg-primary/10 h-1 mt-8">
+      <div className="bg-primary h-full animate-[progress_2s_ease-in-out_infinite]" style={{width: '30%'}}></div>
+    </div>
+    <a href={`https://basescan.org/tx/${txHash}`} target="_blank" rel="noreferrer" className="block text-[10px] opacity-40 hover:opacity-100 transition-opacity">
+      TX: {txHash.slice(0,10)}...{txHash.slice(-8)} ↗
+    </a>
+  </div>
+);
 
-const ResultPanel = ({ result, onReset }: { result: ZeitgeistResult; onReset: () => void }) => {
+const ResultPanel = ({ result, onReset }: any) => {
   const ageHours = Math.floor((Date.now() / 1000 - result.generatedAt) / 3_600);
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-8 text-left">
+      <div className="flex items-end justify-between border-b border-primary/20 pb-4">
         <div>
-          <p className="text-xs uppercase tracking-wider opacity-60">Snapshot</p>
-          <h2 className="font-display text-2xl font-bold">{result.groupName}</h2>
+          <p className="text-[10px] uppercase tracking-[0.2em] opacity-40 mb-1">Vibe ID: #{result.generatedAt.toString().slice(-4)}</p>
+          <h2 className="text-4xl font-black italic text-white">{result.groupName}</h2>
         </div>
-        {result.cached ? (
-          <span className="badge badge-ghost text-xs">Cached {ageHours}h ago</span>
-        ) : (
-          <span className="badge badge-success text-xs">Fresh</span>
-        )}
+        <span className="text-[10px] font-mono opacity-40 uppercase">{result.cached ? `Cached ${ageHours}h` : "Live Signal"}</span>
       </div>
 
-      {result.lowConfidence ? (
-        <div className="alert alert-warning text-sm">
-          <span>
-            ⚠ Low confidence: not enough fresh signal was found for this group. Take the analysis below with extra
-            salt.
-          </span>
+      {result.imageUrl && (
+        <div className="relative border-4 border-black shadow-[0_0_20px_rgba(56,189,248,0.1)]">
+          <Image src={result.imageUrl} alt="" width={1024} height={1024} unoptimized className="w-full grayscale-[0.2] contrast-[1.1]" />
+          <div className="absolute inset-0 pointer-events-none bg-gradient-to-t from-black/60 to-transparent"></div>
         </div>
-      ) : null}
+      )}
 
-      {result.imageUrl ? (
-        <div className="relative">
-          <Image
-            src={result.imageUrl}
-            alt={`Meme snapshot of ${result.groupName}`}
-            width={1024}
-            height={1024}
-            unoptimized
-            className="w-full rounded-lg border border-base-300"
-          />
-          <a
-            href={result.imageUrl}
-            download={`zeitgeist-${result.groupName.replace(/\s+/g, "-").toLowerCase()}.png`}
-            className="btn btn-sm btn-secondary absolute top-3 right-3"
-          >
-            Download
-          </a>
-        </div>
-      ) : null}
-
-      <div>
-        <p className="text-xs uppercase tracking-wider opacity-60 mb-1">Mood</p>
-        <p className="font-display text-xl font-semibold">{result.moodHeadline}</p>
-      </div>
-
-      {result.signals.length > 0 ? (
+      <div className="space-y-6">
         <div>
-          <p className="text-xs uppercase tracking-wider opacity-60 mb-2">Signals</p>
-          <ul className="list-disc pl-5 space-y-1 text-sm">
-            {result.signals.map((s, i) => (
-              <li key={i}>{s}</li>
+          <p className="text-[10px] uppercase tracking-[0.2em] opacity-40 mb-2">Diagnosis</p>
+          <p className="text-2xl font-bold text-primary leading-tight italic">"{result.moodHeadline}"</p>
+        </div>
+
+        <div>
+          <p className="text-[10px] uppercase tracking-[0.2em] opacity-40 mb-3">Signals</p>
+          <ul className="space-y-3">
+            {result.signals.map((s: string, i: number) => (
+              <li key={i} className="flex gap-3 text-sm leading-snug">
+                <span className="text-primary font-mono">0{i+1}</span>
+                <span className="opacity-80">{s}</span>
+              </li>
             ))}
           </ul>
         </div>
-      ) : null}
 
-      <div>
-        <p className="text-xs uppercase tracking-wider opacity-60 mb-1">TLDR</p>
-        <p className="text-sm leading-relaxed">{result.tldr}</p>
+        <div className="bg-primary/5 p-4 border-l-2 border-primary/30">
+          <p className="text-[10px] uppercase tracking-[0.2em] opacity-40 mb-2">TLDR</p>
+          <p className="text-sm leading-relaxed opacity-90 italic">"{result.tldr}"</p>
+        </div>
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-2 pt-4 border-t border-base-300 text-xs opacity-60">
-        <span>
-          Paid in {result.isClawdPayment ? "CLAWD" : "ETH"} ·{" "}
-          <a className="link" href={`https://basescan.org/tx/${result.txHash}`} target="_blank" rel="noreferrer">
-            tx ↗
-          </a>
-        </span>
-        <button className="btn btn-primary btn-sm" onClick={onReset}>
-          Generate another
+      <div className="pt-6 flex items-center justify-between">
+        <button className="btn bg-primary text-black hover:bg-primary/80 rounded-none border-none px-8" onClick={onReset}>
+          New Scan
         </button>
+        <a className="text-[10px] font-mono opacity-40 hover:opacity-100 transition-opacity uppercase tracking-widest" href={`https://basescan.org/tx/${result.txHash}`} target="_blank" rel="noreferrer">
+          Verify on-chain ↗
+        </a>
       </div>
     </div>
   );
