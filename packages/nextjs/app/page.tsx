@@ -431,15 +431,25 @@ const Home: NextPage = () => {
         <section className="mt-8 text-center text-xs opacity-60">
           <p>
             Contract:{" "}
-            <span className="inline-block align-middle">
-              <Address address={ZEITGEIST_PAYMENT_ADDRESS} chain={base} />
-            </span>
+            <a
+              href={`https://basescan.org/address/${ZEITGEIST_PAYMENT_ADDRESS}`}
+              target="_blank"
+              rel="noreferrer"
+              className="underline underline-offset-2 hover:opacity-100"
+            >
+              {ZEITGEIST_PAYMENT_ADDRESS.slice(0, 6)}...{ZEITGEIST_PAYMENT_ADDRESS.slice(-4)}
+            </a>
           </p>
           <p className="mt-1">
             CLAWD:{" "}
-            <span className="inline-block align-middle">
-              <Address address={CLAWD_ADDRESS} chain={base} />
-            </span>
+            <a
+              href={`https://basescan.org/address/${CLAWD_ADDRESS}`}
+              target="_blank"
+              rel="noreferrer"
+              className="underline underline-offset-2 hover:opacity-100"
+            >
+              {CLAWD_ADDRESS.slice(0, 6)}...{CLAWD_ADDRESS.slice(-4)}
+            </a>
           </p>
         </section>
       </div>
@@ -511,7 +521,7 @@ const InputPanel = ({
   return (
     <div className="space-y-6">
       <label className="block">
-        <span className="text-sm font-medium opacity-70">Cultural group</span>
+        <p className="text-xl font-semibold text-center mb-3 opacity-90">Check the vibe of...</p>
         <input
           type="text"
           value={groupName}
