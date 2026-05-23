@@ -350,17 +350,17 @@ const Home: NextPage = () => {
           <div className="mb-3">
             <Image src="/clawd_icon_blue.png" alt="VibeCheck" width={56} height={56} className="mx-auto opacity-90" />
           </div>
-          <h1 className="text-6xl font-black italic tracking-tighter text-white mb-2">VibeCheck</h1>
-          <div className="w-full h-px bg-primary opacity-60 mb-0.5" />
-          <div className="w-full h-px bg-primary opacity-40 mb-0.5" />
-          <div className="w-full h-px bg-primary opacity-20 mb-3" />
-          <p className="text-sm opacity-60 tracking-wide">
+          <h1 style={{fontFamily: '"Playfair Display", serif', fontWeight: 900, fontStyle: 'italic'}} className="text-7xl text-white mb-2 leading-none">VibeCheck</h1>
+          <div className="w-full h-[3px] bg-primary opacity-70 mb-[3px]" />
+          <div className="w-full h-[2px] bg-primary opacity-45 mb-[2px]" />
+          <div className="w-full h-px bg-primary opacity-25 mb-4" />
+          <p className="text-xs opacity-60 tracking-[0.15em] uppercase">
             Diagnosing the collective unconscious since today.
           </p>
         </header>
 
         {/* Main card */}
-        <section className="border border-primary/30 bg-black/60 p-6 sm:p-8 rounded-none shadow-[0_0_30px_rgba(56,189,248,0.05)]">
+        <section className="border border-primary/40 bg-black/70 p-6 sm:p-8 rounded-none" style={{boxShadow: '0 0 20px rgba(56,189,248,0.12), inset 0 0 20px rgba(56,189,248,0.03)'}}>
           {pipeline.status === "input" || pipeline.status === "submitting" ? (
             <InputPanel
               groupName={groupName}
@@ -411,8 +411,22 @@ const Home: NextPage = () => {
           ) : null}
         </section>
 
+        {/* Synthwave scene */}
+        <div className="relative w-full h-40 mt-8 overflow-hidden">
+          {/* Grid floor */}
+          <div className="absolute bottom-0 left-0 right-0 h-24" style={{backgroundImage: 'linear-gradient(rgba(56,189,248,0.2) 1px, transparent 1px), linear-gradient(90deg, rgba(56,189,248,0.2) 1px, transparent 1px)', backgroundSize: '40px 20px', transform: 'perspective(180px) rotateX(50deg)', transformOrigin: 'bottom center'}} />
+          {/* Sun */}
+          <div className="absolute left-1/2 -translate-x-1/2" style={{bottom: '40px', width: '80px', height: '40px', background: 'linear-gradient(to bottom, #ffffff, #38bdf8)', clipPath: 'ellipse(50% 50% at 50% 100%)', overflow: 'hidden'}}>
+            <div style={{position:'absolute',inset:0,backgroundImage:'repeating-linear-gradient(to bottom, transparent 0px, transparent 5px, #020c18 5px, #020c18 7px)'}} />
+          </div>
+          {/* Mountains left */}
+          <div className="absolute bottom-10 left-0" style={{width:'45%', height:'60px', background:'rgba(56,189,248,0.15)', clipPath:'polygon(0% 100%, 20% 20%, 40% 70%, 60% 10%, 80% 50%, 100% 100%)'}} />
+          {/* Mountains right */}
+          <div className="absolute bottom-10 right-0" style={{width:'45%', height:'60px', background:'rgba(56,189,248,0.15)', clipPath:'polygon(0% 100%, 20% 50%, 40% 10%, 60% 70%, 80% 20%, 100% 100%)'}} />
+        </div>
+
         {/* Footer */}
-        <section className="mt-8 text-center text-[10px] opacity-40 font-mono space-y-1">
+        <section className="mt-4 text-center text-[10px] opacity-40 font-mono space-y-1">
           <p>
             Contract:{" "}
             <a href={`https://basescan.org/address/${ZEITGEIST_PAYMENT_ADDRESS}`} target="_blank" rel="noreferrer" className="hover:opacity-100 underline underline-offset-2">
