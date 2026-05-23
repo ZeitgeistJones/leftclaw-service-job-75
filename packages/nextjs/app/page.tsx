@@ -1,4 +1,4 @@
-"use strict";
+"use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
@@ -232,7 +232,7 @@ const Home: NextPage = () => {
     <div className="flex items-center flex-col flex-grow pt-4 pb-12 px-4 font-serif">
       <div className="flex flex-col items-center text-center max-w-2xl w-full">
         <div className="mb-2">
-          <Image src="/home/ubuntu/clawd_icon_blue.png" alt="📡" width={64} height={64} className="opacity-90" />
+          <Image src="/clawd_icon_blue.png" alt="📡" width={64} height={64} className="opacity-90" />
         </div>
         <h1 className="text-7xl font-black tracking-tighter text-white mb-0 italic">VibeCheck</h1>
         <div className="w-full h-1 bg-gradient-to-r from-transparent via-primary to-transparent mt-2 mb-1 opacity-50"></div>
@@ -365,7 +365,7 @@ const InputPanel = ({
             className={`btn join-item flex-1 rounded-none border-none flex items-center justify-center gap-2 ${paymentMode === "CLAWD" ? "bg-primary text-black" : "bg-transparent text-primary/60 hover:bg-primary/10"}`}
             onClick={() => setPaymentMode("CLAWD")}
           >
-            <Image src="/home/ubuntu/clawd_icon_blue.png" alt="" width={18} height={18} className={paymentMode === "CLAWD" ? "invert" : ""} />
+            <Image src="/clawd_icon_blue.png" alt="" width={18} height={18} className={paymentMode === "CLAWD" ? "invert" : ""} />
             CLAWD
           </button>
         </div>
