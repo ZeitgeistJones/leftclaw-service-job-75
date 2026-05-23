@@ -54,7 +54,7 @@ const LOADING_STATES = [
   "Decoding the cultural moment...",
 ];
 
-const SUGGESTIONS = ["crypto twitter", "normie reddit", "doomer programmers", "farcaster maxis", "finance bros"];
+const SUGGESTIONS = ["farcaster maxis", "normie reddit", "doomer programmers", "finance bros", "degen gamblers"];
 
 const ZEITGEIST_PAYMENT_ADDRESS = deployedContracts[8453].ZeitgeistPayment.address as AddressType;
 const CLAWD_ADDRESS = externalContracts[8453].CLAWD.address as AddressType;
@@ -518,7 +518,7 @@ const InputPanel = ({
           type="text"
           value={groupName}
           onChange={e => setGroupName(e.target.value)}
-          placeholder='e.g. "Jets fans", "TikTok traders", "Crypto Twitter"'
+          placeholder='e.g. "farcaster maxis", "doomer programmers", "finance bros"'
           maxLength={120}
           className="input input-bordered w-full mt-2 font-display text-lg"
         />
