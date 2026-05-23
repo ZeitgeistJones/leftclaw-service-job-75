@@ -373,7 +373,7 @@ const Home: NextPage = () => {
           <div className="text-6xl mb-4">📡</div>
           <h1 className="font-display text-5xl font-bold tracking-tight mb-3">VibeCheck</h1>
           <p className="text-lg opacity-80 max-w-xl mx-auto">
-            Diagnosing the collective unconscious since today. Pay <span className="font-semibold">5,000 CLAWD</span> or <span className="font-semibold">$0.25 ETH</span> on Base — get 5 real-time signals, a surreal meme, and a TLDR of what any group is actually feeling right now.
+            Diagnosing the collective unconscious since today.
           </p>
         </header>
 
