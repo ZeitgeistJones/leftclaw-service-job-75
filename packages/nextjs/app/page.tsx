@@ -54,7 +54,7 @@ const LOADING_STATES = [
   "Decoding the cultural moment...",
 ];
 
-const SUGGESTIONS = ["Jets fans", "TikTok traders", "Crypto Twitter", "F1 girlies", "doomer programmers"];
+const SUGGESTIONS = ["crypto twitter", "normie reddit", "doomer programmers", "farcaster maxis", "finance bros"];
 
 const ZEITGEIST_PAYMENT_ADDRESS = deployedContracts[8453].ZeitgeistPayment.address as AddressType;
 const CLAWD_ADDRESS = externalContracts[8453].CLAWD.address as AddressType;
@@ -372,11 +372,10 @@ const Home: NextPage = () => {
     <div className="font-sans flex flex-col items-center grow w-full px-4 pt-10 pb-24">
       <div className="w-full max-w-2xl">
         <header className="mb-10 text-center">
-          <div className="text-6xl mb-4">🔮</div>
-          <h1 className="font-display text-5xl font-bold tracking-tight mb-3">Zeitgeist</h1>
+          <div className="text-6xl mb-4">📡</div>
+          <h1 className="font-display text-5xl font-bold tracking-tight mb-3">VibeCheck</h1>
           <p className="text-lg opacity-80 max-w-xl mx-auto">
-            Pay <span className="font-semibold">$0.25</span> in ETH or CLAWD on Base. Get an AI-synthesized snapshot of
-            any cultural group — meme image plus written analysis pulled from real-time web signals.
+            Diagnosing the collective unconscious since today. Pay <span className="font-semibold">5,000 CLAWD</span> or <span className="font-semibold">$0.25 ETH</span> on Base — get 5 real-time signals, a surreal meme, and a TLDR of what any group is actually feeling right now.
           </p>
         </header>
 
