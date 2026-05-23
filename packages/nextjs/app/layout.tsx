@@ -1,37 +1,32 @@
-import { Space_Mono, Space_Grotesk } from "next/font/google";
+import { Inter, Space_Grotesk } from "next/font/google";
 import "@rainbow-me/rainbowkit/styles.css";
 import "@scaffold-ui/components/styles.css";
 import { ScaffoldEthAppWithProviders } from "~~/components/ScaffoldEthAppWithProviders";
 import { ThemeProvider } from "~~/components/ThemeProvider";
 import "~~/styles/globals.css";
+import { getMetadata } from "~~/utils/scaffold-eth/getMetadata";
 
-const spaceMono = Space_Mono({
+const inter = Inter({
   subsets: ["latin"],
-  weight: ["400", "700"],
-  variable: "--font-mono-var",
+  variable: "--font-sans",
   display: "swap",
 });
 
 const spaceGrotesk = Space_Grotesk({
   subsets: ["latin"],
-  variable: "--font-display-var",
+  variable: "--font-display",
   display: "swap",
 });
 
-export const metadata = {
-  title: "VibeCheck",
+export const metadata = getMetadata({
+  title: "Zeitgeist",
   description:
-    "Diagnosing the collective unconscious since today. On-chain cultural intelligence powered by $CLAWD on Base.",
-  openGraph: {
-    title: "VibeCheck",
-    description: "Diagnosing the collective unconscious since today.",
-    siteName: "VibeCheck",
-  },
-};
+    "Pay $0.25 in ETH or CLAWD on Base to generate an AI-synthesized cultural snapshot of any group — meme image plus written analysis from real-time web signals.",
+});
 
-const VibeCheckApp = ({ children }: { children: React.ReactNode }) => {
+const ScaffoldEthApp = ({ children }: { children: React.ReactNode }) => {
   return (
-    <html suppressHydrationWarning lang="en" className={`${spaceMono.variable} ${spaceGrotesk.variable}`}>
+    <html suppressHydrationWarning className={`${inter.variable} ${spaceGrotesk.variable}`}>
       <body>
         <ThemeProvider enableSystem>
           <ScaffoldEthAppWithProviders>{children}</ScaffoldEthAppWithProviders>
@@ -41,4 +36,4 @@ const VibeCheckApp = ({ children }: { children: React.ReactNode }) => {
   );
 };
 
-export default VibeCheckApp;
+export default ScaffoldEthApp;
