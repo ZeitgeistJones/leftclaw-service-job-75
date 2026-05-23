@@ -54,8 +54,6 @@ const LOADING_STATES = [
   "Decoding the cultural moment...",
 ];
 
-const SUGGESTIONS = ["farcaster maxis", "normie reddit", "doomer programmers", "finance bros", "degen gamblers"];
-
 const ZEITGEIST_PAYMENT_ADDRESS = deployedContracts[8453].ZeitgeistPayment.address as AddressType;
 const CLAWD_ADDRESS = externalContracts[8453].CLAWD.address as AddressType;
 const CLAWD_ABI = externalContracts[8453].CLAWD.abi;
@@ -522,24 +520,13 @@ const InputPanel = ({
           maxLength={120}
           className="input input-bordered w-full mt-2 font-display text-lg"
         />
-        <div className="flex flex-wrap gap-1 mt-2 text-xs">
-          {SUGGESTIONS.map(s => (
-            <button
-              key={s}
-              type="button"
-              className="badge badge-ghost cursor-pointer hover:badge-secondary"
-              onClick={() => setGroupName(s)}
-            >
-              {s}
-            </button>
-          ))}
-        </div>
+
       </label>
 
       <div>
         <div className="flex items-center justify-between mb-2">
           <span className="text-sm font-medium opacity-70">Pay with</span>
-          <span className="text-xs opacity-60">$0.25 USD per query</span>
+          <span className="text-xs opacity-60">5,000 CLAWD or ~$0.25 ETH per query</span>
         </div>
         <div className="join w-full">
           <button
@@ -619,8 +606,7 @@ const InputPanel = ({
       )}
 
       <p className="text-xs text-center opacity-50">
-        Payment goes to a smart contract on Base. Result generation is off-chain. Cached results are returned for free
-        for 24h.
+        Each query hits live signals from Reddit, Farcaster, YouTube, and the web — synthesized in real time. Results are cached for 24h so repeat queries are free.
       </p>
     </div>
   );
