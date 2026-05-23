@@ -44,7 +44,7 @@ export const Footer = () => {
       <div className="w-full">
         <ul className="menu menu-horizontal w-full">
           <div className="flex justify-center items-center gap-2 text-sm w-full">
-            <div className="text-center opacity-60">Zeitgeist · Real-time cultural signals on Base</div>
+            <div className="text-center opacity-60">VibeCheck · diagnosing the collective unconscious since today · built on Base</div>
           </div>
         </ul>
       </div>
