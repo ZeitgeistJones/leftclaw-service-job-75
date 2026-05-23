@@ -1,39 +1,35 @@
-import { Inter, Space_Grotesk } from "next/font/google";
-import "@rainbow-me/rainbowkit/styles.css";
-import "@scaffold-ui/components/styles.css";
-import { ScaffoldEthAppWithProviders } from "~~/components/ScaffoldEthAppWithProviders";
-import { ThemeProvider } from "~~/components/ThemeProvider";
+import { Space_Mono, Space_Grotesk } from "next/font/google";
 import "~~/styles/globals.css";
-import { getMetadata } from "~~/utils/scaffold-eth/getMetadata";
 
-const inter = Inter({
+const spaceMono = Space_Mono({
   subsets: ["latin"],
-  variable: "--font-sans",
+  weight: ["400", "700"],
+  variable: "--font-mono-var",
   display: "swap",
 });
 
 const spaceGrotesk = Space_Grotesk({
   subsets: ["latin"],
-  variable: "--font-display",
+  variable: "--font-display-var",
   display: "swap",
 });
 
-export const metadata = getMetadata({
-  title: "Zeitgeist",
-  description:
-    "Pay $0.25 in ETH or CLAWD on Base to generate an AI-synthesized cultural snapshot of any group — meme image plus written analysis from real-time web signals.",
-});
+export const metadata = {
+  title: "VibeCheck",
+  description: "Diagnosing the collective unconscious since today. On-chain cultural intelligence powered by $CLAWD on Base.",
+  openGraph: {
+    title: "VibeCheck",
+    description: "Diagnosing the collective unconscious since today.",
+    siteName: "VibeCheck",
+  },
+};
 
-const ScaffoldEthApp = ({ children }: { children: React.ReactNode }) => {
+const VibeCheckApp = ({ children }: { children: React.ReactNode }) => {
   return (
-    <html suppressHydrationWarning className={`${inter.variable} ${spaceGrotesk.variable}`}>
-      <body>
-        <ThemeProvider enableSystem>
-          <ScaffoldEthAppWithProviders>{children}</ScaffoldEthAppWithProviders>
-        </ThemeProvider>
-      </body>
+    <html lang="en" className={`${spaceMono.variable} ${spaceGrotesk.variable}`}>
+      <body>{children}</body>
     </html>
   );
 };
 
-export default ScaffoldEthApp;
+export default VibeCheckApp;
