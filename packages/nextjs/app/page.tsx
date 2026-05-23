@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
-import { Address } from "@scaffold-ui/components";
 import type { NextPage } from "next";
 import { type Address as AddressType, formatEther, formatUnits } from "viem";
 import { base } from "viem/chains";
