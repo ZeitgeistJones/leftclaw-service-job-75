@@ -265,10 +265,12 @@ Style: Retro CRT monitor aesthetic, glitch art, highly symbolic, no text, dark b
         "Authorization": `Bearer ${openaiKey}`,
       },
       body: JSON.stringify({
-        model: "dall-e-3",
+        model: "gpt-image-1",
         prompt: imagePrompt,
         n: 1,
         size: "1024x1024",
+        quality: "standard",
+        output_format: "url",
       }),
     });
     if (imgRes.ok) {
