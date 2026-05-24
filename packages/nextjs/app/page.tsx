@@ -345,7 +345,7 @@ const Home: NextPage = () => {
 
   return (
     <div className="flex flex-col items-center grow w-full px-4 pt-8 pb-24 font-mono">
-      <div className="w-full max-w-xl">
+      <div style={{width: '100%', maxWidth: '900px'}}>
         {/* Header */}
         <header className="mb-8 text-center">
           <h1 style={{fontFamily: '"Playfair Display", serif', fontWeight: 900, fontStyle: 'italic', fontSize: 'clamp(4rem, 14vw, 8rem)', lineHeight: 1, color: '#ffffff', textShadow: '0 0 40px rgba(255,255,255,0.3), 0 0 80px rgba(56,189,248,0.15)'}}>VibeCheck</h1>
@@ -358,7 +358,7 @@ const Home: NextPage = () => {
         </header>
 
         {/* Main card */}
-        <section className="p-6 sm:p-8" style={{background: 'rgba(7,21,38,0.9)', border: '1px solid rgba(56,189,248,0.5)', boxShadow: '0 0 25px rgba(56,189,248,0.18), inset 0 0 25px rgba(56,189,248,0.04)'}}>
+        <section style={{padding: '40px 48px', background: 'rgba(7,21,38,0.9)', border: '1px solid rgba(56,189,248,0.5)', boxShadow: '0 0 25px rgba(56,189,248,0.18), inset 0 0 25px rgba(56,189,248,0.04)'}}>
           {pipeline.status === "input" || pipeline.status === "submitting" ? (
             <InputPanel
               groupName={groupName}
@@ -519,14 +519,14 @@ const InputPanel = ({
   return (
     <div className="space-y-6">
       <div className="text-center">
-        <p style={{fontSize: '1.6rem', fontWeight: 700, color: '#ffffff', marginBottom: '1rem', fontFamily: '"Playfair Display", serif', fontStyle: 'italic'}}>Check the vibe of...</p>
+        <p style={{fontSize: '2rem', fontWeight: 700, color: '#ffffff', marginBottom: '1.2rem', fontFamily: '"Playfair Display", serif', fontStyle: 'italic'}}>Check the vibe of...</p>
         <input
           type="text"
           value={groupName}
           onChange={e => setGroupName(e.target.value)}
           placeholder='e.g. "farcaster maxis", "doomer programmers", "finance bros"'
           maxLength={120}
-          style={{width: '100%', background: 'rgba(0,0,0,0.6)', border: '1px solid rgba(56,189,248,0.4)', padding: '14px 16px', textAlign: 'center', fontSize: '1rem', color: '#ffffff', fontFamily: 'Space Mono, monospace', outline: 'none'}}
+          style={{width: '100%', background: 'rgba(0,0,0,0.6)', border: '1px solid rgba(56,189,248,0.4)', padding: '18px 20px', textAlign: 'center', fontSize: '1.2rem', color: '#ffffff', fontFamily: 'Space Mono, monospace', outline: 'none'}}
         />
       </div>
 
@@ -540,8 +540,8 @@ const InputPanel = ({
               onClick={() => setAnalysisMode(m)}
               style={{
                 flex: 1,
-                padding: '10px 0',
-                fontSize: '0.75rem',
+                padding: '14px 0',
+                fontSize: '0.9rem',
                 fontWeight: 700,
                 letterSpacing: '0.1em',
                 textTransform: 'uppercase',
@@ -624,8 +624,8 @@ const InputPanel = ({
       ) : (
         <button
           type="button"
-          className="w-full py-4 text-lg font-bold transition-colors disabled:cursor-not-allowed"
-          style={submitDisabled ? {background: 'rgba(56,189,248,0.2)', color: '#38bdf8', opacity: 0.4} : {background: '#38bdf8', color: '#000000'}}
+          className="w-full font-bold transition-colors disabled:cursor-not-allowed"
+          style={submitDisabled ? {padding: '20px', fontSize: '1.3rem', letterSpacing: '0.05em', background: 'rgba(56,189,248,0.2)', color: '#38bdf8', opacity: 0.4} : {padding: '20px', fontSize: '1.3rem', letterSpacing: '0.05em', background: '#38bdf8', color: '#000000'}}
           onClick={onSubmit}
           disabled={submitDisabled}
         >
@@ -680,7 +680,7 @@ const ResultPanel = ({ result, onReset }: { result: ZeitgeistResult; onReset: ()
           <p className="text-[10px] uppercase tracking-[0.2em] opacity-40 mb-1">
             Vibe #{result.generatedAt.toString().slice(-4)}
           </p>
-          <h2 className="text-3xl font-black italic text-white">{result.groupName}</h2>
+          <h2 style={{fontSize: '2.5rem', fontWeight: 900, fontStyle: 'italic', color: '#ffffff'}}>{result.groupName}</h2>
         </div>
         <span className="text-[10px] opacity-40 uppercase">
           {result.cached ? `Cached ${ageHours}h` : "Live Signal"}
@@ -715,7 +715,7 @@ const ResultPanel = ({ result, onReset }: { result: ZeitgeistResult; onReset: ()
 
       <div>
         <p style={{fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.2em', color: '#7dd3fc', marginBottom: '8px'}}>Diagnosis</p>
-        <p style={{fontSize: '1.4rem', fontWeight: 700, color: '#38bdf8', fontStyle: 'italic'}}>"{result.moodHeadline}"</p>
+        <p style={{fontSize: '1.8rem', fontWeight: 700, color: '#38bdf8', fontStyle: 'italic', lineHeight: 1.3}}>"{result.moodHeadline}"</p>
       </div>
 
       {result.signals.length > 0 ? (
@@ -723,7 +723,7 @@ const ResultPanel = ({ result, onReset }: { result: ZeitgeistResult; onReset: ()
           <p style={{fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.2em', color: '#7dd3fc', marginBottom: '12px'}}>Signals</p>
           <ul style={{display: 'flex', flexDirection: 'column', gap: '10px'}}>
             {result.signals.map((s, i) => (
-              <li key={i} style={{display: 'flex', gap: '12px', fontSize: '0.95rem', lineHeight: 1.5}}>
+              <li key={i} style={{display: 'flex', gap: '14px', fontSize: '1.05rem', lineHeight: 1.6}}>
                 <span style={{color: '#38bdf8', fontFamily: 'Space Mono, monospace', flexShrink: 0}}>0{i + 1}</span>
                 <span style={{color: '#e0f2fe'}}>{s}</span>
               </li>
@@ -734,7 +734,7 @@ const ResultPanel = ({ result, onReset }: { result: ZeitgeistResult; onReset: ()
 
       <div style={{borderLeft: '2px solid rgba(56,189,248,0.3)', paddingLeft: '16px', background: 'rgba(56,189,248,0.05)', padding: '12px 16px'}}>
         <p style={{fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.2em', color: '#7dd3fc', marginBottom: '6px'}}>TLDR</p>
-        <p style={{fontSize: '0.95rem', lineHeight: 1.6, color: '#e0f2fe', fontStyle: 'italic'}}>"{result.tldr}"</p>
+        <p style={{fontSize: '1.05rem', lineHeight: 1.7, color: '#e0f2fe', fontStyle: 'italic'}}>"{result.tldr}"</p>
       </div>
 
       <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '16px', borderTop: '1px solid rgba(56,189,248,0.2)', gap: '8px', flexWrap: 'wrap'}}>
