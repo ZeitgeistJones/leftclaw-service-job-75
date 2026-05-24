@@ -153,7 +153,7 @@ async function fetchStockTwits(groupName: string) {
 // Pipeline Execution
 // ------------------------------------------------------------------
 
-export async function runPipeline(txHash: `0x${string}`, expectedGroupName: string): Promise<ZeitgeistResult> {
+export async function runZeitgeistPipeline(txHash: `0x${string}`, expectedGroupName: string): Promise<ZeitgeistResult> {
   const cacheKey = `vibecheck:result:${expectedGroupName.toLowerCase().trim()}`;
   const cached = await kv.get<ZeitgeistResult>(cacheKey);
   if (cached) {
