@@ -347,7 +347,7 @@ const Home: NextPage = () => {
       <div className="w-full max-w-xl">
         {/* Header */}
         <header className="mb-8 text-center">
-          <h1 style={{fontFamily: '"Playfair Display", serif', fontWeight: 900, fontStyle: 'italic', fontSize: 'clamp(4rem, 14vw, 8rem)', lineHeight: 1, color: '#ffffff'}}>VibeCheck</h1>
+          <h1 style={{fontFamily: '"Playfair Display", serif', fontWeight: 900, fontStyle: 'italic', fontSize: 'clamp(4rem, 14vw, 8rem)', lineHeight: 1, color: '#ffffff', textShadow: '0 0 40px rgba(255,255,255,0.3), 0 0 80px rgba(56,189,248,0.15)'}}>VibeCheck</h1>
           <div style={{height: '3px', background: '#38bdf8', opacity: 0.8, marginBottom: '3px'}} />
           <div style={{height: '2px', background: '#38bdf8', opacity: 0.5, marginBottom: '2px'}} />
           <div style={{height: '1px', background: '#38bdf8', opacity: 0.25, marginBottom: '16px'}} />
@@ -357,7 +357,7 @@ const Home: NextPage = () => {
         </header>
 
         {/* Main card */}
-        <section className="border border-primary/40 bg-black/70 p-6 sm:p-8 rounded-none" style={{boxShadow: '0 0 20px rgba(56,189,248,0.12), inset 0 0 20px rgba(56,189,248,0.03)'}}>
+        <section className="p-6 sm:p-8" style={{background: 'rgba(7,21,38,0.9)', border: '1px solid rgba(56,189,248,0.5)', boxShadow: '0 0 25px rgba(56,189,248,0.18), inset 0 0 25px rgba(56,189,248,0.04)'}}>
           {pipeline.status === "input" || pipeline.status === "submitting" ? (
             <InputPanel
               groupName={groupName}
@@ -512,7 +512,7 @@ const InputPanel = ({
   return (
     <div className="space-y-6">
       <div className="text-center">
-        <p className="text-2xl font-bold mb-4" style={{color: '#e0f2fe'}}>Check the vibe of...</p>
+        <p style={{fontSize: '1.6rem', fontWeight: 700, color: '#e0f2fe', marginBottom: '1rem', fontFamily: '"Playfair Display", serif', fontStyle: 'italic'}}>Check the vibe of...</p>
         <input
           type="text"
           value={groupName}
@@ -598,9 +598,9 @@ const InputPanel = ({
             ? "Transmitting..."
             : insufficientFunds
               ? `Insufficient ${paymentMode}`
-              : !groupName.trim()
-                ? "Input target"
-                : "Check Vibe →"}
+                : !groupName.trim()
+                  ? "Check Vibe →"
+                  : "Check Vibe →"}
         </button>
       )}
 
