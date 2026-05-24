@@ -347,11 +347,11 @@ const Home: NextPage = () => {
       <div className="w-full max-w-xl">
         {/* Header */}
         <header className="mb-8 text-center">
-          <h1 style={{fontFamily: '"Playfair Display", serif', fontWeight: 900, fontStyle: 'italic'}} className="text-7xl text-white mb-2 leading-none">VibeCheck</h1>
-          <div className="w-full h-[3px] bg-primary opacity-70 mb-[3px]" />
-          <div className="w-full h-[2px] bg-primary opacity-45 mb-[2px]" />
-          <div className="w-full h-px bg-primary opacity-25 mb-4" />
-          <p className="text-xs opacity-60 tracking-[0.15em] uppercase">
+          <h1 style={{fontFamily: '"Playfair Display", serif', fontWeight: 900, fontStyle: 'italic', fontSize: 'clamp(4rem, 14vw, 8rem)', lineHeight: 1, color: '#ffffff'}}>VibeCheck</h1>
+          <div style={{height: '3px', background: '#38bdf8', opacity: 0.8, marginBottom: '3px'}} />
+          <div style={{height: '2px', background: '#38bdf8', opacity: 0.5, marginBottom: '2px'}} />
+          <div style={{height: '1px', background: '#38bdf8', opacity: 0.25, marginBottom: '16px'}} />
+          <p style={{fontSize: '0.75rem', color: '#38bdf8', opacity: 0.7, letterSpacing: '0.15em', textTransform: 'uppercase'}}>
             Diagnosing the collective unconscious since today.
           </p>
         </header>
@@ -413,8 +413,8 @@ const Home: NextPage = () => {
           {/* Grid floor */}
           <div className="absolute bottom-0 left-0 right-0 h-24" style={{backgroundImage: 'linear-gradient(rgba(56,189,248,0.2) 1px, transparent 1px), linear-gradient(90deg, rgba(56,189,248,0.2) 1px, transparent 1px)', backgroundSize: '40px 20px', transform: 'perspective(180px) rotateX(50deg)', transformOrigin: 'bottom center'}} />
           {/* Sun */}
-          <div className="absolute left-1/2 -translate-x-1/2" style={{bottom: '40px', width: '80px', height: '40px', background: 'linear-gradient(to bottom, #ffffff, #38bdf8)', clipPath: 'ellipse(50% 50% at 50% 100%)', overflow: 'hidden'}}>
-            <div style={{position:'absolute',inset:0,backgroundImage:'repeating-linear-gradient(to bottom, transparent 0px, transparent 5px, #020c18 5px, #020c18 7px)'}} />
+          <div className="absolute left-1/2 -translate-x-1/2" style={{bottom: '48px', width: '110px', height: '55px', background: 'linear-gradient(to bottom, #ffffff 0%, #7dd3fc 40%, #38bdf8 100%)', clipPath: 'ellipse(50% 50% at 50% 100%)', overflow: 'hidden', boxShadow: '0 0 30px rgba(56,189,248,0.4)'}}>
+            <div style={{position:'absolute',inset:0,backgroundImage:'repeating-linear-gradient(to bottom, transparent 0px, transparent 6px, #020c18 6px, #020c18 8px)'}} />
           </div>
           {/* Mountains left */}
           <div className="absolute bottom-10 left-0" style={{width:'45%', height:'60px', background:'rgba(56,189,248,0.15)', clipPath:'polygon(0% 100%, 20% 20%, 40% 70%, 60% 10%, 80% 50%, 100% 100%)'}} />
@@ -423,21 +423,24 @@ const Home: NextPage = () => {
         </div>
 
         {/* Footer */}
-        <section className="mt-4 text-center text-[10px] opacity-40 font-mono space-y-1">
-          <p>
+        <section className="mt-4 text-center font-mono space-y-3">
+          <p style={{fontSize: '10px', color: '#38bdf8', opacity: 0.4}}>
             Contract:{" "}
-            <a href={`https://basescan.org/address/${ZEITGEIST_PAYMENT_ADDRESS}`} target="_blank" rel="noreferrer" className="hover:opacity-100 underline underline-offset-2">
+            <a href={`https://basescan.org/address/${ZEITGEIST_PAYMENT_ADDRESS}`} target="_blank" rel="noreferrer" style={{textDecoration: 'underline'}}>
               {ZEITGEIST_PAYMENT_ADDRESS.slice(0, 6)}...{ZEITGEIST_PAYMENT_ADDRESS.slice(-4)}
             </a>
             {" · "}
             CLAWD:{" "}
-            <a href={`https://basescan.org/address/${CLAWD_ADDRESS}`} target="_blank" rel="noreferrer" className="hover:opacity-100 underline underline-offset-2">
+            <a href={`https://basescan.org/address/${CLAWD_ADDRESS}`} target="_blank" rel="noreferrer" style={{textDecoration: 'underline'}}>
               {CLAWD_ADDRESS.slice(0, 6)}...{CLAWD_ADDRESS.slice(-4)}
             </a>
           </p>
-          <div className="flex items-center justify-center gap-2 mt-3">
-            <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-            <span className="uppercase tracking-[0.15em]">VIBECHECK v1.0.0 · CONSCIOUSNESS NETWORK ONLINE</span>
+          <div style={{border: '1px solid rgba(56,189,248,0.25)', padding: '10px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between'}}>
+            <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
+              <span style={{width: '8px', height: '8px', borderRadius: '50%', background: '#38bdf8', display: 'inline-block', animation: 'pulse 2s infinite'}} />
+              <span style={{fontSize: '10px', color: '#38bdf8', opacity: 0.5, letterSpacing: '0.1em', textTransform: 'uppercase'}}>VIBECHECK v1.0.0</span>
+            </div>
+            <span style={{fontSize: '10px', color: '#38bdf8', opacity: 0.5, letterSpacing: '0.1em', textTransform: 'uppercase'}}>CONSCIOUSNESS NETWORK ONLINE</span>
           </div>
         </section>
       </div>
@@ -529,7 +532,7 @@ const InputPanel = ({
           <button
             type="button"
             className="flex-1 py-3 text-sm font-bold transition-colors"
-            style={paymentMode === "ETH" ? {background: '#38bdf8', color: '#000'} : {background: 'transparent', color: '#38bdf8', opacity: 0.7}}
+            style={paymentMode === "ETH" ? {background: '#38bdf8', color: '#000'} : {background: 'transparent', color: '#38bdf8', border: '1px solid rgba(56,189,248,0.4)'}}
             onClick={() => setPaymentMode("ETH")}
           >
             ETH
