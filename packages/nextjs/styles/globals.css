@@ -31,44 +31,41 @@
   --color-error: #f87171;
   --radius-field: 0rem;
   --radius-box: 0rem;
-  --tt-tailw: 6px;
 }
 
 @layer base {
-  *,
-  ::after,
-  ::before,
-  ::backdrop,
-  ::file-selector-button {
-    border-color: var(--color-gray-200, currentColor);
+  * {
+    box-sizing: border-box;
   }
 
   body {
     min-height: 100vh;
-    background: #020c18;
+    background-color: #020c18;
+    color: #e0f2fe;
     font-family: 'Space Mono', monospace;
   }
 
-  h1 {
-    font-family: 'Playfair Display', serif;
-    font-weight: 900;
-    font-style: italic;
+  h1, h2, h3, h4 {
     line-height: 1;
-  }
-
-  h2, h3, h4 {
-    margin-bottom: 0.5rem;
-    line-height: 1;
+    margin: 0;
   }
 
   p {
     margin: 0;
   }
+
+  input, button {
+    font-family: 'Space Mono', monospace;
+  }
 }
 
-:root,
-[data-theme] {
-  background: #020c18;
+/* Force all text to be visible */
+:root {
+  --vc-blue: #38bdf8;
+  --vc-bg: #020c18;
+  --vc-card: #071526;
+  --vc-text: #e0f2fe;
+  --vc-muted: rgba(224, 242, 254, 0.5);
 }
 
 /* CRT scanline overlay */
@@ -82,100 +79,27 @@ body::before {
     0deg,
     transparent,
     transparent 2px,
-    rgba(0, 0, 0, 0.05) 2px,
-    rgba(0, 0, 0, 0.05) 4px
+    rgba(0, 0, 0, 0.04) 2px,
+    rgba(0, 0, 0, 0.04) 4px
   );
 }
 
-/* Wireframe synthwave scene — rendered as a CSS background on the page */
-.vibecheck-scene {
-  position: relative;
-  width: 100%;
-  height: 180px;
-  overflow: hidden;
-  pointer-events: none;
-}
-
-.vibecheck-scene::before {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 120px;
-  height: 60px;
-  background: linear-gradient(to bottom, #ffffff 0%, #38bdf8 30%, transparent 100%);
-  clip-path: polygon(50% 0%, 100% 100%, 0% 100%);
-  opacity: 0.9;
-}
-
-/* Sun stripes */
-.vibecheck-scene::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 120px;
-  height: 60px;
-  background: repeating-linear-gradient(
-    to bottom,
-    transparent 0px,
-    transparent 6px,
-    #020c18 6px,
-    #020c18 9px
-  );
-  clip-path: polygon(50% 0%, 100% 100%, 0% 100%);
-  opacity: 1;
-}
-
-/* Grid floor */
-.vibecheck-grid {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 120px;
-  background-image:
-    linear-gradient(rgba(56,189,248,0.25) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(56,189,248,0.25) 1px, transparent 1px);
-  background-size: 40px 20px;
-  transform: perspective(200px) rotateX(45deg);
-  transform-origin: bottom center;
-}
-
-/* Mountain silhouettes */
-.vibecheck-mountains {
-  position: absolute;
-  bottom: 60px;
-  left: 0;
-  right: 0;
-  height: 80px;
-  background:
-    /* left mountains */
-    polygon(0% 100%, 15% 30%, 30% 70%, 45% 10%, 50% 100%),
-    /* right mountains */
-    polygon(50% 100%, 55% 10%, 70% 70%, 85% 30%, 100% 100%);
-  opacity: 0.4;
-}
-
+/* Override DaisyUI btn to always show text */
 .btn {
-  border-radius: 0;
+  border-radius: 0 !important;
+  color: #38bdf8;
 }
 
-.btn.btn-ghost {
-  box-shadow: none;
+.btn-primary {
+  background-color: #38bdf8 !important;
+  color: #000000 !important;
+  border: none !important;
 }
 
-.link {
-  text-underline-offset: 2px;
+.btn-primary:hover {
+  background-color: rgba(56, 189, 248, 0.8) !important;
 }
 
 .link:hover {
-  opacity: 80%;
-}
-
-/* Neon glow on card border */
-.neon-border {
-  box-shadow: 0 0 8px rgba(56, 189, 248, 0.15), inset 0 0 8px rgba(56, 189, 248, 0.05);
+  opacity: 0.8;
 }
