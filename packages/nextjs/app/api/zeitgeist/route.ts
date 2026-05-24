@@ -9,7 +9,7 @@ async function handle(txHash: string | null, groupName: string | null, mode: str
     return NextResponse.json({ error: "txHash and groupName are required" }, { status: 400 });
   }
   try {
-    const result = await runZeitgeistPipeline(txHash as `0x${string}`, groupName, mode);
+    const result = await runZeitgeistPipeline(txHash as `0x${string}`, groupName, ip, mode);
     if ("error" in result) {
       const status = (result as any).retryAfterMs ? 429 : 402;
       return NextResponse.json(result, { status });
