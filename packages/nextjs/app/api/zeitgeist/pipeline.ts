@@ -153,8 +153,8 @@ async function fetchStockTwits(groupName: string) {
 // Pipeline Execution
 // ------------------------------------------------------------------
 
-export async function runZeitgeistPipeline(txHash: `0x${string}`, expectedGroupName: string): Promise<ZeitgeistResult> {
-  const cacheKey = `vibecheck:result:${expectedGroupName.toLowerCase().trim()}`;
+export async function runZeitgeistPipeline(txHash: `0x${string}`, expectedGroupName: string, mode: string = "meme"): Promise<ZeitgeistResult> {
+  const cacheKey = `vibecheck:result:${expectedGroupName.toLowerCase().trim()}:${mode}`;
   const cached = await kv.get<ZeitgeistResult>(cacheKey);
   if (cached) {
     return { ...cached, cached: true, txHash };
@@ -172,7 +172,7 @@ export async function runZeitgeistPipeline(txHash: `0x${string}`, expectedGroupN
     toBlock: receipt.blockNumber,
   });
 
-  const paymentLog = logs.find((l: any) => l.transactionHash === txHash);
+  const paymentLog = logs.find(l => l.transactionHash === txHash);
   if (!paymentLog) {
     throw new Error("No QueryPaid event found in this transaction");
   }
@@ -216,8 +216,39 @@ export async function runZeitgeistPipeline(txHash: `0x${string}`, expectedGroupN
 
   const lowConfidence = allData.length < 100;
 
-  const systemPrompt = `You are VibeCheck, an on-chain cultural intelligence terminal.
-Analyze the provided real-time data streams (Reddit, Farcaster, Web, YouTube, Crypto Markets, Social Sentiment) for the target group/topic.
+  let systemPrompt = "";
+  let imageStyle = "";
+
+  if (mode === "technical") {
+    systemPrompt = `You are VibeCheck, an on-chain cultural intelligence terminal.
+Analyze the provided real-time data streams for the target group/topic.
+Synthesize the current vibe into exactly 5 signals and a 2-sentence TLDR.
+
+RULES:
+1. Output MUST be valid JSON.
+2. "moodHeadline" must be a 3-6 word clinical diagnosis of their current state.
+3. "signals" must be an array of exactly 5 strings. Each string must be a precise, data-forward observation based ONLY on the provided data. Include specific metrics if available.
+4. "tldr" must be exactly 2 sentences providing a tight executive summary.
+5. DO NOT include source labels or URLs.
+6. Tone: Clinical, analytical, neutral, no fluff, no humor.`;
+    imageStyle = "Clean data visualization aesthetic, minimal, abstract geometric shapes, dark background, icy blue accents, no text.";
+  } else if (mode === "basic") {
+    systemPrompt = `You are VibeCheck, an on-chain cultural intelligence terminal.
+Analyze the provided real-time data streams for the target group/topic.
+Synthesize the current vibe into exactly 5 signals and a 2-sentence TLDR.
+
+RULES:
+1. Output MUST be valid JSON.
+2. "moodHeadline" must be a 3-6 word simple summary of their current mood.
+3. "signals" must be an array of exactly 5 strings. Each string must be a clear, conversational observation based ONLY on the provided data. No jargon.
+4. "tldr" must be exactly 2 sentences explaining what's going on simply.
+5. DO NOT include source labels or URLs.
+6. Tone: Friendly, accessible, clear, like a smart friend explaining it.`;
+    imageStyle = "Clean, illustrative, friendly, simple vector art, dark background, bright blue accents, no text.";
+  } else {
+    // meme mode (default)
+    systemPrompt = `You are VibeCheck, an on-chain cultural intelligence terminal.
+Analyze the provided real-time data streams for the target group/topic.
 Synthesize the current vibe into exactly 5 punchy signals and a 2-sentence TLDR.
 
 RULES:
@@ -225,9 +256,10 @@ RULES:
 2. "moodHeadline" must be a 3-6 word diagnosis of their current mental state.
 3. "signals" must be an array of exactly 5 strings. Each string must be a sharp, specific observation based ONLY on the provided data.
 4. "tldr" must be exactly 2 sentences summarizing the overall vibe.
-5. DO NOT include source labels (like "Reddit:" or "Web:") in the signals.
-6. DO NOT include URLs.
-7. Tone: Clinical, slightly absurdist, highly observant.`;
+5. DO NOT include source labels or URLs.
+6. Tone: Clinical, slightly absurdist, highly observant, shitpost energy.`;
+    imageStyle = "Retro CRT monitor aesthetic, glitch art, highly symbolic, surreal meme energy, no text, dark background, icy blue and neon accents.";
+  }
 
   const userPrompt = `Target: ${groupName}\n\nData Streams (Past 24h):\n${allData || "No data found."}`;
 
@@ -252,9 +284,9 @@ RULES:
   const gptData = await gptRes.json();
   const parsed = JSON.parse(gptData.choices[0].message.content);
 
-  const imagePrompt = `A surreal, absurdist meme snapshot representing this cultural diagnosis: "${parsed.moodHeadline}". 
+  const imagePrompt = `A visual snapshot representing this cultural diagnosis: "${parsed.moodHeadline}". 
 Context: ${parsed.tldr}
-Style: Retro CRT monitor aesthetic, glitch art, highly symbolic, no text, dark background, icy blue and neon accents.`;
+Style: ${imageStyle}`;
 
   let imageUrl = "";
   try {
