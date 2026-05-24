@@ -85,6 +85,7 @@ const Home: NextPage = () => {
 
   const [groupName, setGroupName] = useState("");
   const [paymentMode, setPaymentMode] = useState<PaymentMode>("ETH");
+  const [analysisMode, setAnalysisMode] = useState<"meme" | "basic" | "technical">("meme");
   const [pipeline, setPipeline] = useState<Pipeline>({ status: "input" });
   const [loadingTextIndex, setLoadingTextIndex] = useState(0);
   const [approveSubmitting, setApproveSubmitting] = useState(false);
@@ -195,7 +196,7 @@ const Home: NextPage = () => {
       return;
     }
     const apiBase = process.env.NEXT_PUBLIC_API_URL || "";
-    const url = `${apiBase}/api/zeitgeist?txHash=${pipeline.txHash}&groupName=${encodeURIComponent(groupName)}`;
+    const url = `${apiBase}/api/zeitgeist?txHash=${pipeline.txHash}&groupName=${encodeURIComponent(groupName)}&mode=${analysisMode}`;
     let cancelled = false;
 
     const poll = async () => {
@@ -228,7 +229,7 @@ const Home: NextPage = () => {
         pollIntervalRef.current = null;
       }
     };
-  }, [pipeline, groupName]);
+  }, [pipeline, groupName, analysisMode]);
 
   const handleApprove = useCallback(async () => {
     if (!connectedAddress || needsApproval === false) return;
@@ -364,6 +365,8 @@ const Home: NextPage = () => {
               setGroupName={setGroupName}
               paymentMode={paymentMode}
               setPaymentMode={setPaymentMode}
+              analysisMode={analysisMode}
+              setAnalysisMode={setAnalysisMode}
               isConnected={isConnected}
               onWrongNetwork={onWrongNetwork}
               onSwitchChain={() => switchChain({ chainId: base.id })}
@@ -474,6 +477,8 @@ type InputPanelProps = {
   approveSecondsLeft: number;
   onSubmit: () => void;
   submitting: boolean;
+  analysisMode: "meme" | "basic" | "technical";
+  setAnalysisMode: (m: "meme" | "basic" | "technical") => void;
 };
 
 const InputPanel = ({
@@ -481,6 +486,8 @@ const InputPanel = ({
   setGroupName,
   paymentMode,
   setPaymentMode,
+  analysisMode,
+  setAnalysisMode,
   isConnected,
   onWrongNetwork,
   onSwitchChain,
@@ -512,15 +519,43 @@ const InputPanel = ({
   return (
     <div className="space-y-6">
       <div className="text-center">
-        <p style={{fontSize: '1.6rem', fontWeight: 700, color: '#e0f2fe', marginBottom: '1rem', fontFamily: '"Playfair Display", serif', fontStyle: 'italic'}}>Check the vibe of...</p>
+        <p style={{fontSize: '1.6rem', fontWeight: 700, color: '#ffffff', marginBottom: '1rem', fontFamily: '"Playfair Display", serif', fontStyle: 'italic'}}>Check the vibe of...</p>
         <input
           type="text"
           value={groupName}
           onChange={e => setGroupName(e.target.value)}
           placeholder='e.g. "farcaster maxis", "doomer programmers", "finance bros"'
           maxLength={120}
-          className="w-full bg-black/60 border border-primary/30 focus:border-primary/70 outline-none px-4 py-3 text-center text-base text-white placeholder:opacity-40 font-mono"
+          style={{width: '100%', background: 'rgba(0,0,0,0.6)', border: '1px solid rgba(56,189,248,0.4)', padding: '14px 16px', textAlign: 'center', fontSize: '1rem', color: '#ffffff', fontFamily: 'Space Mono, monospace', outline: 'none'}}
         />
+      </div>
+
+      {/* Mode buttons */}
+      <div>
+        <div style={{display: 'flex', gap: '0', border: '1px solid rgba(56,189,248,0.3)'}}>
+          {(["meme", "basic", "technical"] as const).map((m) => (
+            <button
+              key={m}
+              type="button"
+              onClick={() => setAnalysisMode(m)}
+              style={{
+                flex: 1,
+                padding: '10px 0',
+                fontSize: '0.75rem',
+                fontWeight: 700,
+                letterSpacing: '0.1em',
+                textTransform: 'uppercase',
+                transition: 'all 0.2s',
+                background: analysisMode === m ? '#38bdf8' : 'transparent',
+                color: analysisMode === m ? '#000000' : '#7dd3fc',
+                border: 'none',
+                cursor: 'pointer',
+              }}
+            >
+              {m}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div>
@@ -679,38 +714,50 @@ const ResultPanel = ({ result, onReset }: { result: ZeitgeistResult; onReset: ()
       ) : null}
 
       <div>
-        <p className="text-[10px] uppercase tracking-[0.2em] opacity-40 mb-2">Diagnosis</p>
-        <p className="text-xl font-bold text-primary italic">"{result.moodHeadline}"</p>
+        <p style={{fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.2em', color: '#7dd3fc', marginBottom: '8px'}}>Diagnosis</p>
+        <p style={{fontSize: '1.4rem', fontWeight: 700, color: '#38bdf8', fontStyle: 'italic'}}>"{result.moodHeadline}"</p>
       </div>
 
       {result.signals.length > 0 ? (
         <div>
-          <p className="text-[10px] uppercase tracking-[0.2em] opacity-40 mb-3">Signals</p>
-          <ul className="space-y-2">
+          <p style={{fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.2em', color: '#7dd3fc', marginBottom: '12px'}}>Signals</p>
+          <ul style={{display: 'flex', flexDirection: 'column', gap: '10px'}}>
             {result.signals.map((s, i) => (
-              <li key={i} className="flex gap-3 text-sm">
-                <span className="text-primary font-mono shrink-0">0{i + 1}</span>
-                <span className="opacity-80">{s}</span>
+              <li key={i} style={{display: 'flex', gap: '12px', fontSize: '0.95rem', lineHeight: 1.5}}>
+                <span style={{color: '#38bdf8', fontFamily: 'Space Mono, monospace', flexShrink: 0}}>0{i + 1}</span>
+                <span style={{color: '#e0f2fe'}}>{s}</span>
               </li>
             ))}
           </ul>
         </div>
       ) : null}
 
-      <div className="border-l-2 border-primary/30 pl-4 bg-primary/5 py-3">
-        <p className="text-[10px] uppercase tracking-[0.2em] opacity-40 mb-1">TLDR</p>
-        <p className="text-sm leading-relaxed opacity-90 italic">"{result.tldr}"</p>
+      <div style={{borderLeft: '2px solid rgba(56,189,248,0.3)', paddingLeft: '16px', background: 'rgba(56,189,248,0.05)', padding: '12px 16px'}}>
+        <p style={{fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.2em', color: '#7dd3fc', marginBottom: '6px'}}>TLDR</p>
+        <p style={{fontSize: '0.95rem', lineHeight: 1.6, color: '#e0f2fe', fontStyle: 'italic'}}>"{result.tldr}"</p>
       </div>
 
-      <div className="flex items-center justify-between pt-4 border-t border-primary/20">
-        <button
-          className="bg-primary text-black px-6 py-2 font-bold text-sm hover:bg-primary/80 transition-colors"
-          onClick={onReset}
-        >
-          New Scan
-        </button>
+      <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '16px', borderTop: '1px solid rgba(56,189,248,0.2)', gap: '8px', flexWrap: 'wrap'}}>
+        <div style={{display: 'flex', gap: '8px'}}>
+          <button
+            style={{background: '#38bdf8', color: '#000', padding: '8px 20px', fontWeight: 700, fontSize: '0.85rem', border: 'none', cursor: 'pointer'}}
+            onClick={onReset}
+          >
+            New Scan
+          </button>
+          <button
+            style={{background: 'transparent', color: '#38bdf8', padding: '8px 20px', fontWeight: 700, fontSize: '0.85rem', border: '1px solid rgba(56,189,248,0.4)', cursor: 'pointer'}}
+            onClick={() => {
+              const text = `VibeCheck — ${result.groupName}\n\nDiagnosis: ${result.moodHeadline}\n\nSignals:\n${result.signals.map((s, i) => `0${i+1} ${s}`).join('\n')}\n\nTLDR: ${result.tldr}\n\nPowered by VibeCheck · built on Base`;
+              navigator.clipboard.writeText(text);
+              alert('Copied to clipboard!');
+            }}
+          >
+            Copy Analysis
+          </button>
+        </div>
         <a
-          className="text-[10px] opacity-40 hover:opacity-80 transition-opacity uppercase tracking-widest"
+          style={{fontSize: '10px', color: '#7dd3fc', opacity: 0.6, textTransform: 'uppercase', letterSpacing: '0.1em'}}
           href={`https://basescan.org/tx/${result.txHash}`}
           target="_blank"
           rel="noreferrer"
