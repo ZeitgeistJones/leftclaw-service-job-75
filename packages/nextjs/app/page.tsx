@@ -347,9 +347,6 @@ const Home: NextPage = () => {
       <div className="w-full max-w-xl">
         {/* Header */}
         <header className="mb-8 text-center">
-          <div className="mb-3">
-            <Image src="/clawd_icon_blue.png" alt="VibeCheck" width={56} height={56} className="mx-auto opacity-90" />
-          </div>
           <h1 style={{fontFamily: '"Playfair Display", serif', fontWeight: 900, fontStyle: 'italic'}} className="text-7xl text-white mb-2 leading-none">VibeCheck</h1>
           <div className="w-full h-[3px] bg-primary opacity-70 mb-[3px]" />
           <div className="w-full h-[2px] bg-primary opacity-45 mb-[2px]" />
@@ -512,7 +509,7 @@ const InputPanel = ({
   return (
     <div className="space-y-6">
       <div className="text-center">
-        <p className="text-2xl font-bold text-white mb-4">Check the vibe of...</p>
+        <p className="text-2xl font-bold mb-4" style={{color: '#e0f2fe'}}>Check the vibe of...</p>
         <input
           type="text"
           value={groupName}
@@ -524,21 +521,23 @@ const InputPanel = ({
       </div>
 
       <div>
-        <div className="flex items-center justify-between mb-2 text-xs opacity-60">
+        <div className="flex items-center justify-between mb-2 text-xs px-1" style={{color: '#38bdf8', opacity: 0.6}}>
           <span className="uppercase tracking-widest">Transmission Fee</span>
           <span>5,000 CLAWD / ~$0.25 ETH</span>
         </div>
-        <div className="flex border border-primary/30">
+        <div className="flex" style={{border: '1px solid rgba(56,189,248,0.3)'}}>
           <button
             type="button"
-            className={`flex-1 py-3 text-sm font-bold transition-colors ${paymentMode === "ETH" ? "bg-primary text-black" : "bg-transparent text-primary/60 hover:bg-primary/10"}`}
+            className="flex-1 py-3 text-sm font-bold transition-colors"
+            style={paymentMode === "ETH" ? {background: '#38bdf8', color: '#000'} : {background: 'transparent', color: '#38bdf8', opacity: 0.7}}
             onClick={() => setPaymentMode("ETH")}
           >
             ETH
           </button>
           <button
             type="button"
-            className={`flex-1 py-3 text-sm font-bold flex items-center justify-center gap-2 transition-colors ${paymentMode === "CLAWD" ? "bg-primary text-black" : "bg-transparent text-primary/60 hover:bg-primary/10"}`}
+            className="flex-1 py-3 text-sm font-bold flex items-center justify-center gap-2 transition-colors"
+            style={paymentMode === "CLAWD" ? {background: '#38bdf8', color: '#000'} : {background: 'transparent', color: '#38bdf8', opacity: 0.7}}
             onClick={() => setPaymentMode("CLAWD")}
           >
             <Image
@@ -546,12 +545,12 @@ const InputPanel = ({
               alt=""
               width={16}
               height={16}
-              className={paymentMode === "CLAWD" ? "invert" : "opacity-60"}
+              style={paymentMode === "CLAWD" ? {filter: 'invert(1)'} : {opacity: 0.7}}
             />
             CLAWD
           </button>
         </div>
-        <div className="mt-2 flex items-center justify-between text-xs opacity-60 px-1">
+        <div className="mt-2 flex items-center justify-between text-xs px-1" style={{color: '#38bdf8', opacity: 0.6}}>
           <span>{paymentMode === "ETH" ? `~${ethRequiredFormatted} ETH` : `${clawdRequiredFormatted} CLAWD`}</span>
           <span>Bal: {paymentMode === "ETH" ? `${ethBalanceFormatted} ETH` : `${clawdBalanceFormatted} CLAWD`}</span>
         </div>
@@ -564,7 +563,7 @@ const InputPanel = ({
       </div>
 
       {!isConnected ? (
-        <div className="border border-dashed border-primary/20 p-4 text-center text-sm opacity-50">
+        <div className="p-4 text-center text-sm" style={{border: '1px dashed rgba(56,189,248,0.3)', color: '#38bdf8', opacity: 0.6}}>
           Connect wallet to transmit
         </div>
       ) : onWrongNetwork ? (
@@ -587,7 +586,8 @@ const InputPanel = ({
       ) : (
         <button
           type="button"
-          className="w-full py-4 bg-primary text-black text-lg font-bold hover:bg-primary/80 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          className="w-full py-4 text-lg font-bold transition-colors disabled:cursor-not-allowed"
+          style={submitDisabled ? {background: 'rgba(56,189,248,0.2)', color: '#38bdf8', opacity: 0.4} : {background: '#38bdf8', color: '#000000'}}
           onClick={onSubmit}
           disabled={submitDisabled}
         >
