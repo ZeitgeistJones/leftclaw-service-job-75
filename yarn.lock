@@ -2188,7 +2188,7 @@
     "@noble/hashes" "~1.7.1"
     "@scure/base" "~1.2.4"
 
-"@se-2/foundry@file:/tmp/cc-agent/67190644/project/packages/foundry":
+"@se-2/foundry@file:/vercel/share/v0-project/packages/foundry":
   version "0.0.1"
   resolved "file:packages/foundry"
   dependencies:
@@ -2199,7 +2199,7 @@
     qrcode "~1.5.3"
     toml "~3.0.0"
 
-"@se-2/nextjs@file:/tmp/cc-agent/67190644/project/packages/nextjs":
+"@se-2/nextjs@file:/vercel/share/v0-project/packages/nextjs":
   version "0.1.0"
   resolved "file:packages/nextjs"
   dependencies:
