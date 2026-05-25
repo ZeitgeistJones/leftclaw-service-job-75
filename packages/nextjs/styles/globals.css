@@ -5,6 +5,35 @@
 @theme {
   --shadow-center: 0 0 12px -2px rgb(0 0 0 / 0.05);
   --animate-pulse-fast: pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  --animate-glow: glow 2s ease-in-out infinite alternate;
+  --animate-float: float 6s ease-in-out infinite;
+  --animate-slide-up: slideUp 0.6s ease-out forwards;
+  --animate-fade-in: fadeIn 0.5s ease-out forwards;
+}
+
+@keyframes glow {
+  from { box-shadow: 0 0 20px rgba(56, 189, 248, 0.2); }
+  to { box-shadow: 0 0 40px rgba(56, 189, 248, 0.4); }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(300%); }
 }
 
 @plugin "daisyui" {
@@ -84,6 +113,56 @@ body::before {
   );
 }
 
+/* Animated gradient border for main card */
+.vibe-card {
+  position: relative;
+  background: rgba(7, 21, 38, 0.95);
+}
+
+.vibe-card::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  background: linear-gradient(
+    45deg,
+    rgba(56, 189, 248, 0.5),
+    rgba(56, 189, 248, 0.1),
+    rgba(56, 189, 248, 0.5),
+    rgba(56, 189, 248, 0.1)
+  );
+  background-size: 400% 400%;
+  animation: gradient-shift 8s ease infinite;
+  z-index: -1;
+  opacity: 0.6;
+}
+
+@keyframes gradient-shift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+/* Glowing input focus */
+.vibe-input:focus {
+  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.3), 0 0 20px rgba(56, 189, 248, 0.2);
+}
+
+/* Animated submit button */
+.vibe-submit-btn:not(:disabled):hover {
+  animation: glow 1s ease-in-out infinite alternate;
+}
+
+/* Signal list stagger animation */
+.signal-item {
+  animation: slideUp 0.5s ease-out forwards;
+  opacity: 0;
+}
+
+.signal-item:nth-child(1) { animation-delay: 0.1s; }
+.signal-item:nth-child(2) { animation-delay: 0.2s; }
+.signal-item:nth-child(3) { animation-delay: 0.3s; }
+.signal-item:nth-child(4) { animation-delay: 0.4s; }
+.signal-item:nth-child(5) { animation-delay: 0.5s; }
+
 /* Override DaisyUI btn to always show text */
 .btn {
   border-radius: 0 !important;
@@ -102,4 +181,34 @@ body::before {
 
 .link:hover {
   opacity: 0.8;
+}
+
+/* Header glow effect */
+.header-glow {
+  text-shadow: 0 0 40px rgba(56, 189, 248, 0.3), 0 0 80px rgba(56, 189, 248, 0.15);
+}
+
+/* Loading dots animation */
+@keyframes bounce {
+  0%, 80%, 100% { transform: translateY(0); }
+  40% { transform: translateY(-10px); }
+}
+
+.loading-dot {
+  animation: bounce 1.4s infinite ease-in-out both;
+}
+
+.loading-dot:nth-child(1) { animation-delay: -0.32s; }
+.loading-dot:nth-child(2) { animation-delay: -0.16s; }
+.loading-dot:nth-child(3) { animation-delay: 0s; }
+
+/* Crypto badge for detected tokens */
+.crypto-badge {
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.2), rgba(56, 189, 248, 0.05));
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  padding: 2px 8px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #38bdf8;
 }

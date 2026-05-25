@@ -88,16 +88,26 @@ async function verifyQueryPaid(
 // ------------------------------------------------------------------
 type Snippet = { text: string; url: string; source: string };
 
-async function gatherSignals(groupName: string, apiKey: string): Promise<{ snippets: Snippet[]; lowConfidence: boolean }> {
+async function gatherSignals(groupName: string, apiKey: string): Promise<{ snippets: Snippet[]; lowConfidence: boolean; isCryptoToken: boolean }> {
   const snippets: Snippet[] = [];
 
-  // Generate targeted queries via GPT
+  // Detect if this is a crypto token (e.g., "BNKR token", "$BNKR", "bnkr crypto")
+  const tokenPattern = /(?:\$[A-Z]{2,10}|[A-Z]{2,10}\s*(?:token|coin|crypto)|(?:token|coin)\s+[A-Z]{2,10})/i;
+  const tickerMatch = groupName.match(/\$?([A-Z]{2,10})/i);
+  const isCryptoToken = tokenPattern.test(groupName) || tickerMatch !== null;
+  const ticker = tickerMatch ? tickerMatch[1].toUpperCase() : null;
+
+  // Generate targeted queries via GPT with crypto awareness
   let braveQueries = [groupName, `${groupName} news 2026`, `${groupName} controversy`];
   let redditQuery = groupName;
   let farcasterQuery = groupName;
   let youtubeQuery = groupName;
 
   try {
+    const cryptoContext = isCryptoToken
+      ? `This appears to be a CRYPTO TOKEN (${ticker || groupName}). Generate queries that will find TOKEN-SPECIFIC data — price action, token metrics, holder behavior, liquidity, on-chain activity, token community sentiment. Avoid queries that would return results about non-crypto topics (e.g., if searching for "$BNKR token", do NOT search for "bankers").`
+      : "";
+
     const qRes = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
@@ -105,10 +115,12 @@ async function gatherSignals(groupName: string, apiKey: string): Promise<{ snipp
         model: "gpt-4o-mini",
         messages: [{
           role: "system",
-          content: `Generate targeted search queries for current discourse about a topic. Return JSON: { "braveQueries": ["q1","q2","q3","q4"], "redditQuery": "q", "farcasterQuery": "q", "youtubeQuery": "q" }`
+          content: `Generate targeted search queries for current discourse about a topic. Return JSON: { "braveQueries": ["q1","q2","q3","q4"], "redditQuery": "q", "farcasterQuery": "q", "youtubeQuery": "q" }
+
+${cryptoContext}`
         }, {
           role: "user",
-          content: `Topic: "${groupName}". Focus on current discourse, reactions, controversy, what people are saying RIGHT NOW in 2026.`
+          content: `Topic: "${groupName}". Focus on current discourse, reactions, controversy, what people are saying RIGHT NOW in 2026. Be SPECIFIC — if this is a crypto token, focus on TOKEN-SPECIFIC queries that won't conflate with non-crypto topics.`
         }],
         response_format: { type: "json_object" },
         temperature: 0.5,
@@ -130,6 +142,64 @@ async function gatherSignals(groupName: string, apiKey: string): Promise<{ snipp
   const ytKey = process.env.YOUTUBE_API_KEY;
   const cmcKey = process.env.COINMARKETCAP_API_KEY;
   const lunarKey = process.env.LUNARCRUSH_API_KEY;
+
+  // If detected as crypto token, fetch on-chain data first
+  let detectedToken: { address: string; symbol: string; name: string; chain: string } | null = null;
+
+  if (isCryptoToken && ticker) {
+    // DexScreener for token data
+    try {
+      const r = await fetch(`https://api.dexscreener.com/latest/dex/search?q=${encodeURIComponent(ticker)}`);
+      if (r.ok) {
+        const d = await r.json() as { pairs?: { chainId: string; baseToken: { address: string; symbol: string; name: string }; priceUsd: string; priceChange?: { h24: number }; volume?: { h24: number }; liquidity?: { usd: number }; txns?: { h24: { buys: number; sells: number } } }[] };
+        const baseMatch = d.pairs?.find(p => p.chainId === "base" && p.baseToken.symbol.toUpperCase() === ticker);
+        const anyMatch = d.pairs?.find(p => p.baseToken.symbol.toUpperCase() === ticker);
+        const match = baseMatch || anyMatch;
+        if (match) {
+          detectedToken = {
+            address: match.baseToken.address,
+            symbol: match.baseToken.symbol,
+            name: match.baseToken.name,
+            chain: match.chainId,
+          };
+          snippets.push({
+            text: `[DEXSCREENER] ${match.baseToken.name} (${match.baseToken.symbol}) on ${match.chainId.toUpperCase()} — Price: $${parseFloat(match.priceUsd || "0").toFixed(8)}, 24h: ${match.priceChange?.h24?.toFixed(1) || "N/A"}%, Volume: $${((match.volume?.h24 || 0) / 1e3).toFixed(1)}K, Liquidity: $${((match.liquidity?.usd || 0) / 1e3).toFixed(1)}K`,
+            url: `https://dexscreener.com/${match.chainId}/${match.baseToken.address}`,
+            source: "onchain",
+          });
+
+          // Add holder behavior signal
+          if (match.txns?.h24) {
+            const { buys, sells } = match.txns.h24;
+            const sentiment = buys > sells * 1.2 ? "accumulating" : sells > buys * 1.2 ? "distributing" : "neutral";
+            snippets.push({
+              text: `[ON-CHAIN SIGNAL] 24h transactions: ${buys} buys vs ${sells} sells — holders appear to be ${sentiment}`,
+              url: `https://dexscreener.com/${match.chainId}/${match.baseToken.address}`,
+              source: "onchain",
+            });
+          }
+        }
+      }
+    } catch { /* continue */ }
+
+    // DexTools for additional token data (Base chain focused)
+    if (!detectedToken) {
+      try {
+        const r = await fetch(`https://www.dextools.io/shared/search/${encodeURIComponent(ticker)}`);
+        if (r.ok) {
+          const d = await r.json() as { results?: { address: string; name: string; symbol: string; network: string }[] };
+          const baseMatch = d.results?.find(r => r.network?.toLowerCase() === "base");
+          if (baseMatch) {
+            snippets.push({
+              text: `[DEXTOOLS] Found ${baseMatch.name} (${baseMatch.symbol}) on Base network`,
+              url: `https://www.dextools.io/app/en/base/pair-explorer/${baseMatch.address}`,
+              source: "onchain",
+            });
+          }
+        }
+      } catch { /* continue */ }
+    }
+  }
 
   await Promise.allSettled([
     // 1. Brave Web Search
@@ -257,11 +327,11 @@ async function gatherSignals(groupName: string, apiKey: string): Promise<{ snipp
     return true;
   });
 
-  return { snippets: unique.slice(0, 30), lowConfidence: unique.length < 3 };
+  return { snippets: unique.slice(0, 30), lowConfidence: unique.length < 3, isCryptoToken, detectedToken };
 }
 
 // ------------------------------------------------------------------
-// Synthesis (mode-aware)
+// Synthesis (mode-aware, crypto-aware)
 // ------------------------------------------------------------------
 async function synthesize(
   groupName: string,
@@ -269,12 +339,29 @@ async function synthesize(
   lowConfidence: boolean,
   apiKey: string,
   mode: string,
+  isCryptoToken: boolean,
+  detectedToken: { address: string; symbol: string; name: string; chain: string } | null,
 ): Promise<{ moodHeadline: string; signals: string[]; tldr: string; analysis: string; imagePrompt: string }> {
   const confidenceCaveat = lowConfidence
     ? "NOTE: Very few results found. Be honest — say the data is thin rather than generating plausible-sounding generic content."
     : "";
 
   const snippetText = snippets.map(s => `[${s.source.toUpperCase()} | ${s.url}] ${s.text}`).join("\n");
+
+  // Crypto-specific insight instructions
+  const cryptoInsightBlock = isCryptoToken
+    ? `
+CRYPTO TOKEN ANALYSIS DEPTH:
+You are analyzing a crypto token. Go BEYOND surface-level observations. Look for:
+- Holder psychology: Are they diamond-handing, panic-selling, or accumulating dips? What's the conviction level?
+- Narrative threading: What story is the community telling itself? (e.g., "the next Base gem", "undervalued utility", "community takeover")
+ - Insider signals: Are early wallets moving? Dev activity? Marketing push incoming?
+- Sentiment divergence: Is price action disconnected from social sentiment? (e.g., price down but holders bullish = accumulation signal)
+- Comparative positioning: How does this token view itself vs competitors? ("the X of Y" framing)
+- Meme culture specific: Is this a memecoin, utility token, or hybrid? What's the tribe identity?
+- WARNING: "Just another memecoin with strong community" is LAZY. Find what makes THIS token's community unique.
+`
+    : "";
 
   let systemPrompt = "";
   let imageInstruction = "";
@@ -285,11 +372,13 @@ async function synthesize(
 ANTI-HALLUCINATION RULE: Only use information actually present in the snippets.
 FOCUS RULE: Every signal must be SPECIFICALLY about "${groupName}".
 
+${cryptoInsightBlock}
+
 Rules:
 - moodHeadline: 3-6 word clinical assessment of current market/social state
 - signals: exactly 5 precise, data-forward observations. Include specific metrics where available. No jargon-free language — this is for analysts.
 - tldr: exactly 2 sentences. Tight, professional executive summary. No humor.
-- analysis: 3-4 paragraphs of structured analytical commentary.
+- analysis: 3-4 paragraphs of structured analytical commentary. For crypto tokens, discuss holder behavior patterns, narrative construction, and on-chain intelligence.
 - imagePrompt: Clean data visualization aesthetic for "${groupName}". Abstract, minimal, professional.
 
 Output valid JSON only. ${confidenceCaveat}`;
@@ -300,37 +389,46 @@ Output valid JSON only. ${confidenceCaveat}`;
 ANTI-HALLUCINATION RULE: Only use information actually present in the snippets.
 FOCUS RULE: Every signal must be SPECIFICALLY about "${groupName}".
 
+${cryptoInsightBlock}
+
 Rules:
 - moodHeadline: 3-6 words describing the current mood in plain English
 - signals: exactly 5 clear, jargon-free observations that anyone can understand. Write like you're texting a friend.
 - tldr: exactly 2 sentences. Simple, clear, no crypto/finance jargon.
-- analysis: 3-4 paragraphs in plain English. Explain context where needed.
+- analysis: 3-4 paragraphs in plain English. Explain context where needed. For crypto, explain what holders believe about the token's future.
 - imagePrompt: Friendly, clear illustration for "${groupName}". Simple, approachable.
 
 Output valid JSON only. ${confidenceCaveat}`;
     imageInstruction = `Friendly, clean illustration. Simple vector art style. Bright, approachable. Dark background, bright blue accents. No text, no words.`;
   } else {
-    // MEME mode — the original unhinged default
+    // MEME mode — the original unhinged default, now crypto-aware
     systemPrompt = `You are a deeply online cultural analyst with terminal brainrot. Your job is to capture THE VIBE RIGHT NOW — what people are CURRENTLY saying, feeling, arguing about, and posting.
 
 ANTI-HALLUCINATION RULE: Only use information actually present in the snippets. If data is thin, be honest about it with humor.
 FOCUS RULE: Every signal must be SPECIFICALLY about "${groupName}". Discard adjacent topics.
 
+${cryptoInsightBlock}
+
 Rules:
 - moodHeadline: punchy, specific, slightly unhinged — captures the current emotional temperature. Should feel like a shitpost diagnosis.
-- signals: exactly 5 items. Write each as a clean, punchy statement — no source labels, no URLs. At least one should include a direct quote formatted naturally as: '"[quote]" — someone on [platform]'. Keep it readable but weird.
+- signals: exactly 5 items. Write each as a clean, punchy statement — no source labels, no URLs. At least one should include a direct quote formatted naturally as: '"[quote]" — someone on [platform]'. Keep it readable but weird. For crypto tokens: surface REAL conviction signals, not just "community strong".
 - tldr: exactly 2 sentences. Both FUNNY — dry wit, absurdist, or brutally honest. No corporate-speak.
-- analysis: 3-4 paragraphs of chaotic but insightful cultural commentary. If data is thin, be funny about it.
+- analysis: 3-4 paragraphs of chaotic but insightful cultural commentary. If data is thin, be funny about it. For crypto: channel the voice of CT (Crypto Twitter) — irreverent, inside-jokey, pattern-recognizing.
 - imagePrompt: IMPORTANT — the image must be recognizably about "${groupName}". Start with the specific subject as an anchor, then add surreal/absurdist internet-brain elements. The viewer should immediately know what the image is about even though it's chaotic and funny. No text in image.
 
 Output valid JSON only. ${confidenceCaveat}`;
     imageInstruction = `Chaotic internet meme aesthetic. Surreal, absurdist, highly symbolic. No text, no words, no letters anywhere in the image.`;
   }
 
+  const tokenContext = detectedToken
+    ? `\n\nDETECTED TOKEN DATA:\n- Name: ${detectedToken.name}\n- Symbol: ${detectedToken.symbol}\n- Chain: ${detectedToken.chain.toUpperCase()}\n- Address: ${detectedToken.address}\nUse this on-chain confidence to ground your crypto-specific analysis.`
+    : "";
+
   const userPrompt = `Group/Topic: "${groupName}"
 
 Current signals (past 24-48 hours):
 ${snippetText}
+${tokenContext}
 
 Return JSON:
 {
@@ -421,8 +519,8 @@ export async function runZeitgeistPipeline(
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) throw new Error("OPENAI_API_KEY not configured");
 
-  const { snippets, lowConfidence } = await gatherSignals(groupName, apiKey);
-  const synthesis = await synthesize(groupName, snippets, lowConfidence, apiKey, resolvedMode);
+  const { snippets, lowConfidence, isCryptoToken, detectedToken } = await gatherSignals(groupName, apiKey);
+  const synthesis = await synthesize(groupName, snippets, lowConfidence, apiKey, resolvedMode, isCryptoToken, detectedToken);
   const imageUrl = await generateImage(synthesis.imagePrompt, apiKey);
 
   const result: ZeitgeistResult = {

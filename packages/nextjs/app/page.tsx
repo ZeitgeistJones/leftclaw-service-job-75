@@ -358,7 +358,7 @@ const Home: NextPage = () => {
         </header>
 
         {/* Main card */}
-        <section style={{padding: '40px 48px', background: 'rgba(7,21,38,0.9)', border: '1px solid rgba(56,189,248,0.5)', boxShadow: '0 0 25px rgba(56,189,248,0.18), inset 0 0 25px rgba(56,189,248,0.04)'}}>
+        <section className="vibe-card" style={{padding: 'clamp(24px, 5vw, 48px) clamp(20px, 4vw, 48px)', border: '1px solid rgba(56,189,248,0.5)', boxShadow: '0 0 25px rgba(56,189,248,0.18), inset 0 0 25px rgba(56,189,248,0.04)'}}>
           {pipeline.status === "input" || pipeline.status === "submitting" ? (
             <InputPanel
               groupName={groupName}
@@ -519,14 +519,15 @@ const InputPanel = ({
   return (
     <div className="space-y-6">
       <div className="text-center">
-        <p style={{fontSize: '2rem', fontWeight: 700, color: '#ffffff', marginBottom: '1.2rem', fontFamily: '"Playfair Display", serif', fontStyle: 'italic'}}>Check the vibe of...</p>
+        <p style={{fontSize: 'clamp(1.5rem, 4vw, 2rem)', fontWeight: 700, color: '#ffffff', marginBottom: '1.2rem', fontFamily: '"Playfair Display", serif', fontStyle: 'italic'}}>Check the vibe of...</p>
         <input
           type="text"
           value={groupName}
           onChange={e => setGroupName(e.target.value)}
-          placeholder='e.g. "farcaster maxis", "doomer programmers", "finance bros"'
+          placeholder='e.g. "BNKR token", "farcaster maxis", "crypto degens"'
           maxLength={120}
-          style={{width: '100%', background: 'rgba(0,0,0,0.6)', border: '1px solid rgba(56,189,248,0.4)', padding: '18px 20px', textAlign: 'center', fontSize: '1.2rem', color: '#ffffff', fontFamily: 'Space Mono, monospace', outline: 'none'}}
+          className="vibe-input"
+          style={{width: '100%', background: 'rgba(0,0,0,0.6)', border: '1px solid rgba(56,189,248,0.4)', padding: '18px 20px', textAlign: 'center', fontSize: 'clamp(1rem, 2.5vw, 1.2rem)', color: '#ffffff', fontFamily: 'Space Mono, monospace', outline: 'none', transition: 'box-shadow 0.3s'}}
         />
       </div>
 
@@ -624,8 +625,8 @@ const InputPanel = ({
       ) : (
         <button
           type="button"
-          className="w-full font-bold transition-colors disabled:cursor-not-allowed"
-          style={submitDisabled ? {padding: '20px', fontSize: '1.3rem', letterSpacing: '0.05em', background: 'rgba(56,189,248,0.2)', color: '#38bdf8', opacity: 0.4} : {padding: '20px', fontSize: '1.3rem', letterSpacing: '0.05em', background: '#38bdf8', color: '#000000'}}
+          className="w-full font-bold transition-colors disabled:cursor-not-allowed vibe-submit-btn"
+          style={submitDisabled ? {padding: '20px', fontSize: 'clamp(1rem, 2.5vw, 1.3rem)', letterSpacing: '0.05em', background: 'rgba(56,189,248,0.2)', color: '#38bdf8', opacity: 0.4} : {padding: '20px', fontSize: 'clamp(1rem, 2.5vw, 1.3rem)', letterSpacing: '0.05em', background: '#38bdf8', color: '#000000'}}
           onClick={onSubmit}
           disabled={submitDisabled}
         >
@@ -634,8 +635,8 @@ const InputPanel = ({
             : insufficientFunds
               ? `Insufficient ${paymentMode}`
                 : !groupName.trim()
-                  ? "Check Vibe →"
-                  : "Check Vibe →"}
+                  ? "Check Vibe"
+                  : "Check Vibe"}
         </button>
       )}
 
@@ -656,14 +657,18 @@ const LoadingPanel = ({
   txHash: `0x${string}`;
 }) => (
   <div className="space-y-6 text-center py-10">
-    <div className="text-5xl animate-pulse">📡</div>
+    <div className="flex justify-center gap-2">
+      <div className="loading-dot w-3 h-3 rounded-full" style={{background: '#38bdf8'}} />
+      <div className="loading-dot w-3 h-3 rounded-full" style={{background: '#38bdf8'}} />
+      <div className="loading-dot w-3 h-3 rounded-full" style={{background: '#38bdf8'}} />
+    </div>
     <div>
       <p className="text-xs opacity-40 uppercase tracking-widest mb-2">Diagnosing</p>
-      <p className="text-2xl font-bold text-white italic">"{groupName}"</p>
+      <p className="text-xl font-bold text-white italic" style={{fontSize: 'clamp(1.2rem, 3vw, 1.5rem)'}}>"{groupName}"</p>
     </div>
     <p className="text-sm text-primary animate-pulse">{loadingText}</p>
-    <div className="w-full bg-primary/10 h-0.5">
-      <div className="bg-primary h-full w-1/3 animate-[pulse_1.5s_ease-in-out_infinite]" />
+    <div className="w-full bg-primary/10 h-1 overflow-hidden" style={{borderRadius: '1px'}}>
+      <div className="h-full animate-pulse" style={{background: 'linear-gradient(90deg, transparent, #38bdf8, transparent)', width: '50%', animation: 'shimmer 2s infinite'}} />
     </div>
     <a href={`https://basescan.org/tx/${txHash}`} target="_blank" rel="noreferrer" className="block text-[10px] opacity-40 hover:opacity-80 transition-opacity">
       TX: {txHash.slice(0, 10)}...{txHash.slice(-8)} ↗
@@ -750,7 +755,7 @@ const ResultPanel = ({ result, onReset }: { result: ZeitgeistResult; onReset: ()
           <p style={{fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.2em', color: '#7dd3fc', marginBottom: '12px'}}>Signals</p>
           <ul style={{display: 'flex', flexDirection: 'column', gap: '10px'}}>
             {result.signals.map((s, i) => (
-              <li key={i} style={{display: 'flex', gap: '14px', fontSize: 'clamp(0.9rem, 2.5vw, 1.05rem)', lineHeight: 1.6}}>
+              <li key={i} className="signal-item" style={{display: 'flex', gap: '14px', fontSize: 'clamp(0.9rem, 2.5vw, 1.05rem)', lineHeight: 1.6}}>
                 <span style={{color: '#38bdf8', fontFamily: 'Space Mono, monospace', flexShrink: 0}}>0{i + 1}</span>
                 <span style={{color: '#e0f2fe'}}>{s}</span>
               </li>
