@@ -12,8 +12,8 @@
 }
 
 @keyframes glow {
-  from { box-shadow: 0 0 20px rgba(56, 189, 248, 0.2); }
-  to { box-shadow: 0 0 40px rgba(56, 189, 248, 0.4); }
+  from { box-shadow: 0 0 20px oklch(var(--vc-primary) / 0.2); }
+  to { box-shadow: 0 0 40px oklch(var(--vc-primary) / 0.4); }
 }
 
 @keyframes float {
@@ -42,20 +42,20 @@
 
 @plugin "daisyui/theme" {
   name: "vibecheck";
-  --color-primary: #38bdf8;
+  --color-primary: oklch(var(--vc-primary));
   --color-primary-content: #000000;
   --color-secondary: #1e3a5f;
   --color-secondary-content: #e0f2fe;
-  --color-accent: #38bdf8;
+  --color-accent: oklch(var(--vc-primary));
   --color-accent-content: #000000;
   --color-neutral: #0d1f35;
   --color-neutral-content: #e0f2fe;
-  --color-base-100: #071526;
-  --color-base-200: #040e1a;
-  --color-base-300: #020c18;
+  --color-base-100: oklch(var(--vc-card));
+  --color-base-200: oklch(var(--vc-bg));
+  --color-base-300: oklch(var(--vc-bg));
   --color-base-content: #e0f2fe;
-  --color-info: #38bdf8;
-  --color-success: #38bdf8;
+  --color-info: oklch(var(--vc-primary));
+  --color-success: oklch(var(--vc-primary));
   --color-warning: #fbbf24;
   --color-error: #f87171;
   --radius-field: 0rem;
@@ -69,7 +69,7 @@
 
   body {
     min-height: 100vh;
-    background-color: #020c18;
+    background-color: var(--vc-bg-hex, #020c18);
     color: #e0f2fe;
     font-family: 'Space Mono', monospace;
   }
@@ -88,11 +88,14 @@
   }
 }
 
-/* Force all text to be visible */
+/* Dynamic theme variables - set via JS */
 :root {
-  --vc-blue: #38bdf8;
-  --vc-bg: #020c18;
-  --vc-card: #071526;
+  --vc-primary: 199 93% 60%;
+  --vc-primary-hex: #38bdf8;
+  --vc-bg: 210 75% 5%;
+  --vc-bg-hex: #020c18;
+  --vc-card: 211 72% 9%;
+  --card-bg: #071526;
   --vc-text: #e0f2fe;
   --vc-muted: rgba(224, 242, 254, 0.5);
 }
@@ -116,7 +119,7 @@ body::before {
 /* Animated gradient border for main card */
 .vibe-card {
   position: relative;
-  background: rgba(7, 21, 38, 0.95);
+  background: var(--card-bg, rgba(7, 21, 38, 0.95));
 }
 
 .vibe-card::before {
@@ -125,10 +128,10 @@ body::before {
   inset: -2px;
   background: linear-gradient(
     45deg,
-    rgba(56, 189, 248, 0.5),
-    rgba(56, 189, 248, 0.1),
-    rgba(56, 189, 248, 0.5),
-    rgba(56, 189, 248, 0.1)
+    oklch(var(--vc-primary) / 0.5),
+    oklch(var(--vc-primary) / 0.1),
+    oklch(var(--vc-primary) / 0.5),
+    oklch(var(--vc-primary) / 0.1)
   );
   background-size: 400% 400%;
   animation: gradient-shift 8s ease infinite;
@@ -143,7 +146,7 @@ body::before {
 
 /* Glowing input focus */
 .vibe-input:focus {
-  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.3), 0 0 20px rgba(56, 189, 248, 0.2);
+  box-shadow: 0 0 0 2px oklch(var(--vc-primary) / 0.3), 0 0 20px oklch(var(--vc-primary) / 0.2);
 }
 
 /* Animated submit button */
@@ -163,20 +166,20 @@ body::before {
 .signal-item:nth-child(4) { animation-delay: 0.4s; }
 .signal-item:nth-child(5) { animation-delay: 0.5s; }
 
-/* Override DaisyUI btn to always show text */
+/* Override DaisyUI btn to use dynamic color */
 .btn {
   border-radius: 0 !important;
-  color: #38bdf8;
+  color: var(--vc-primary-hex, #38bdf8);
 }
 
 .btn-primary {
-  background-color: #38bdf8 !important;
+  background-color: var(--vc-primary-hex, #38bdf8) !important;
   color: #000000 !important;
   border: none !important;
 }
 
 .btn-primary:hover {
-  background-color: rgba(56, 189, 248, 0.8) !important;
+  opacity: 0.85;
 }
 
 .link:hover {
@@ -185,7 +188,7 @@ body::before {
 
 /* Header glow effect */
 .header-glow {
-  text-shadow: 0 0 40px rgba(56, 189, 248, 0.3), 0 0 80px rgba(56, 189, 248, 0.15);
+  text-shadow: 0 0 40px oklch(var(--vc-primary) / 0.3), 0 0 80px oklch(var(--vc-primary) / 0.15);
 }
 
 /* Loading dots animation */
@@ -204,11 +207,26 @@ body::before {
 
 /* Crypto badge for detected tokens */
 .crypto-badge {
-  background: linear-gradient(135deg, rgba(56, 189, 248, 0.2), rgba(56, 189, 248, 0.05));
-  border: 1px solid rgba(56, 189, 248, 0.3);
+  background: linear-gradient(135deg, oklch(var(--vc-primary) / 0.2), oklch(var(--vc-primary) / 0.05));
+  border: 1px solid oklch(var(--vc-primary) / 0.3);
   padding: 2px 8px;
   font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  color: #38bdf8;
+  color: var(--vc-primary-hex, #38bdf8);
+}
+
+/* Dynamic primary color text */
+.text-dynamic-primary {
+  color: var(--vc-primary-hex, #38bdf8);
+}
+
+/* Dynamic border color */
+.border-dynamic-primary {
+  border-color: oklch(var(--vc-primary) / 0.4);
+}
+
+/* Dynamic background elements */
+.bg-dynamic-primary {
+  background-color: var(--vc-primary-hex, #38bdf8);
 }
