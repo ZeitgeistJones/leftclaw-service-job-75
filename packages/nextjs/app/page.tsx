@@ -562,36 +562,56 @@ const InputPanel = ({
       </div>
 
       <div>
-        <div className="flex items-center justify-between mb-2 text-xs px-1" style={{color: 'var(--vc-primary-hex)', opacity: 0.6}}>
+        <div className="flex items-center justify-between mb-3 text-xs px-1" style={{color: 'var(--vc-primary-hex)', opacity: 0.6}}>
           <span className="uppercase tracking-widest">Transmission Fee</span>
-          <span>5,000 CLAWD / ~$0.25 ETH</span>
         </div>
-        <div className="flex" style={{border: '1px solid oklch(var(--vc-primary) / 0.3)'}}>
+        <div className="flex gap-3">
+          {/* ETH Button */}
           <button
             type="button"
-            className="flex-1 py-3 text-sm font-bold transition-colors"
-            style={paymentMode === "ETH" ? {background: 'var(--vc-primary-hex)', color: '#000'} : {background: 'transparent', color: 'var(--vc-primary-hex)', border: '1px solid oklch(var(--vc-primary) / 0.4)'}}
+            className="flex-1 py-4 text-sm font-bold flex items-center justify-center gap-3 transition-all"
+            style={{
+              background: 'transparent',
+              color: 'var(--vc-primary-hex)',
+              border: paymentMode === "ETH" 
+                ? '2px solid var(--vc-primary-hex)' 
+                : '1px solid oklch(var(--vc-primary) / 0.3)',
+              boxShadow: paymentMode === "ETH" 
+                ? '0 0 20px oklch(var(--vc-primary) / 0.3), inset 0 0 20px oklch(var(--vc-primary) / 0.05)' 
+                : 'none',
+            }}
             onClick={() => setPaymentMode("ETH")}
           >
-            ETH
+            <svg viewBox="0 0 24 24" className="w-5 h-5" fill="currentColor">
+              <path d="M12 1.5L5.5 12.5L12 16.5L18.5 12.5L12 1.5Z" opacity="0.6"/>
+              <path d="M12 16.5L5.5 12.5L12 22.5L18.5 12.5L12 16.5Z"/>
+            </svg>
+            <span className="tracking-wider">ETH</span>
           </button>
+          
+          {/* CLAWD Button */}
           <button
             type="button"
-            className="flex-1 py-3 text-sm font-bold flex items-center justify-center gap-2 transition-colors"
-            style={paymentMode === "CLAWD" ? {background: 'var(--vc-primary-hex)', color: '#000'} : {background: 'transparent', color: 'var(--vc-primary-hex)', opacity: 0.7}}
+            className="flex-1 py-4 text-sm font-bold flex items-center justify-center gap-3 transition-all"
+            style={{
+              background: 'transparent',
+              color: 'var(--vc-primary-hex)',
+              border: paymentMode === "CLAWD" 
+                ? '2px solid var(--vc-primary-hex)' 
+                : '1px solid oklch(var(--vc-primary) / 0.3)',
+              boxShadow: paymentMode === "CLAWD" 
+                ? '0 0 20px oklch(var(--vc-primary) / 0.3), inset 0 0 20px oklch(var(--vc-primary) / 0.05)' 
+                : 'none',
+            }}
             onClick={() => setPaymentMode("CLAWD")}
           >
-            <Image
-              src="/clawd_icon_blue.png"
-              alt=""
-              width={16}
-              height={16}
-              style={paymentMode === "CLAWD" ? {filter: 'invert(1)'} : {opacity: 0.7}}
-            />
-            CLAWD
+            <svg viewBox="0 0 24 24" className="w-5 h-5" fill="currentColor">
+              <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4C9.11 4 6.6 5.64 5.35 8.04C2.34 8.36 0 10.91 0 14C0 17.31 2.69 20 6 20H19C21.76 20 24 17.76 24 15C24 12.36 21.95 10.22 19.35 10.04Z"/>
+            </svg>
+            <span className="tracking-wider">CLAWD</span>
           </button>
         </div>
-        <div className="mt-2 flex items-center justify-between text-xs px-1" style={{color: 'var(--vc-primary-hex)', opacity: 0.6}}>
+        <div className="mt-3 flex items-center justify-between text-xs px-1" style={{color: 'var(--vc-primary-hex)', opacity: 0.6}}>
           <span>{paymentMode === "ETH" ? `~${ethRequiredFormatted} ETH` : `${clawdRequiredFormatted} CLAWD`}</span>
           <span>Bal: {paymentMode === "ETH" ? `${ethBalanceFormatted} ETH` : `${clawdBalanceFormatted} CLAWD`}</span>
         </div>
