@@ -7,7 +7,6 @@ import { AppProgressBar as ProgressBar } from "next-nprogress-bar";
 import { useTheme } from "next-themes";
 import { Toaster } from "react-hot-toast";
 import { WagmiProvider } from "wagmi";
-import { ColorCustomizer } from "~~/components/ColorCustomizer";
 import { Footer } from "~~/components/Footer";
 import { Header } from "~~/components/Header";
 import { BlockieAvatar } from "~~/components/scaffold-eth";
@@ -24,7 +23,6 @@ const ScaffoldEthApp = ({ children }: { children: React.ReactNode }) => {
         <Footer />
       </div>
       <Toaster />
-      <ColorCustomizer />
     </>
   );
 };
