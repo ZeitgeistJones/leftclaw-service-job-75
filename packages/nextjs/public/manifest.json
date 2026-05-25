@@ -1,5 +1,39 @@
 {
-  name: 'Scaffold-ETH 2 DApp',
-  description: 'A DApp built with Scaffold-ETH',
-  iconPath: 'logo.svg'
+  "name": "VibeCheck - AI Cultural Sentiment Analysis",
+  "short_name": "VibeCheck",
+  "description": "Pay $0.25 in ETH or CLAWD on Base mainnet, get an AI-synthesized cultural snapshot of any group",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#020c18",
+  "theme_color": "#38bdf8",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/favicon.png",
+      "sizes": "32x32",
+      "type": "image/png"
+    },
+    {
+      "src": "/thumbnail.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg"
+    }
+  ],
+  "categories": ["social", "entertainment", "finance"],
+  "screenshots": [
+    {
+      "src": "/thumbnail.jpg",
+      "sizes": "1200x630",
+      "type": "image/jpeg",
+      "label": "VibeCheck - Check the vibe of any cultural group"
+    }
+  ],
+  "related_applications": [],
+  "prefer_related_applications": false
 }

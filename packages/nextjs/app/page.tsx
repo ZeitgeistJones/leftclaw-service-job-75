@@ -673,6 +673,32 @@ const LoadingPanel = ({
 
 const ResultPanel = ({ result, onReset }: { result: ZeitgeistResult; onReset: () => void }) => {
   const ageHours = Math.floor((Date.now() / 1000 - result.generatedAt) / 3_600);
+
+  const handleShare = async () => {
+    const shareText = `VibeCheck — ${result.groupName}\n\nDiagnosis: ${result.moodHeadline}\n\nTLDR: ${result.tldr}\n\nPowered by VibeCheck · built on Base`;
+
+    if (navigator.share && result.imageUrl) {
+      try {
+        const response = await fetch(result.imageUrl);
+        const blob = await response.blob();
+        const file = new File([blob], `vibecheck-${result.groupName.replace(/\s+/g, "-").toLowerCase()}.png`, { type: blob.type });
+
+        await navigator.share({
+          title: `VibeCheck: ${result.groupName}`,
+          text: shareText,
+          files: [file],
+        });
+      } catch (err) {
+        // Web Share failed, fall back to clipboard
+        navigator.clipboard.writeText(shareText);
+        notification.success("Copied to clipboard!");
+      }
+    } else {
+      navigator.clipboard.writeText(shareText);
+      notification.success("Copied to clipboard!");
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-end justify-between border-b border-primary/20 pb-4">
@@ -680,7 +706,7 @@ const ResultPanel = ({ result, onReset }: { result: ZeitgeistResult; onReset: ()
           <p className="text-[10px] uppercase tracking-[0.2em] opacity-40 mb-1">
             Vibe #{result.generatedAt.toString().slice(-4)}
           </p>
-          <h2 style={{fontSize: '2.5rem', fontWeight: 900, fontStyle: 'italic', color: '#ffffff'}}>{result.groupName}</h2>
+          <h2 style={{fontSize: 'clamp(1.5rem, 5vw, 2.5rem)', fontWeight: 900, fontStyle: 'italic', color: '#ffffff'}}>{result.groupName}</h2>
         </div>
         <span className="text-[10px] opacity-40 uppercase">
           {result.cached ? `Cached ${ageHours}h` : "Live Signal"}
@@ -689,7 +715,7 @@ const ResultPanel = ({ result, onReset }: { result: ZeitgeistResult; onReset: ()
 
       {result.lowConfidence ? (
         <div className="border border-yellow-500/30 bg-yellow-500/10 p-3 text-xs text-yellow-300">
-          ⚠ Low confidence — not enough fresh signal found. Take with extra salt.
+          Low confidence — not enough fresh signal found. Take with extra salt.
         </div>
       ) : null}
 
@@ -702,6 +728,7 @@ const ResultPanel = ({ result, onReset }: { result: ZeitgeistResult; onReset: ()
             height={1024}
             unoptimized
             className="w-full"
+            priority
           />
           <a
             href={result.imageUrl}
@@ -715,7 +742,7 @@ const ResultPanel = ({ result, onReset }: { result: ZeitgeistResult; onReset: ()
 
       <div>
         <p style={{fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.2em', color: '#7dd3fc', marginBottom: '8px'}}>Diagnosis</p>
-        <p style={{fontSize: '1.8rem', fontWeight: 700, color: '#38bdf8', fontStyle: 'italic', lineHeight: 1.3}}>"{result.moodHeadline}"</p>
+        <p style={{fontSize: 'clamp(1.2rem, 4vw, 1.8rem)', fontWeight: 700, color: '#38bdf8', fontStyle: 'italic', lineHeight: 1.3}}>"{result.moodHeadline}"</p>
       </div>
 
       {result.signals.length > 0 ? (
@@ -723,7 +750,7 @@ const ResultPanel = ({ result, onReset }: { result: ZeitgeistResult; onReset: ()
           <p style={{fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.2em', color: '#7dd3fc', marginBottom: '12px'}}>Signals</p>
           <ul style={{display: 'flex', flexDirection: 'column', gap: '10px'}}>
             {result.signals.map((s, i) => (
-              <li key={i} style={{display: 'flex', gap: '14px', fontSize: '1.05rem', lineHeight: 1.6}}>
+              <li key={i} style={{display: 'flex', gap: '14px', fontSize: 'clamp(0.9rem, 2.5vw, 1.05rem)', lineHeight: 1.6}}>
                 <span style={{color: '#38bdf8', fontFamily: 'Space Mono, monospace', flexShrink: 0}}>0{i + 1}</span>
                 <span style={{color: '#e0f2fe'}}>{s}</span>
               </li>
@@ -734,11 +761,11 @@ const ResultPanel = ({ result, onReset }: { result: ZeitgeistResult; onReset: ()
 
       <div style={{borderLeft: '2px solid rgba(56,189,248,0.3)', paddingLeft: '16px', background: 'rgba(56,189,248,0.05)', padding: '12px 16px'}}>
         <p style={{fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.2em', color: '#7dd3fc', marginBottom: '6px'}}>TLDR</p>
-        <p style={{fontSize: '1.05rem', lineHeight: 1.7, color: '#e0f2fe', fontStyle: 'italic'}}>"{result.tldr}"</p>
+        <p style={{fontSize: 'clamp(0.95rem, 2.5vw, 1.05rem)', lineHeight: 1.7, color: '#e0f2fe', fontStyle: 'italic'}}>"{result.tldr}"</p>
       </div>
 
       <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '16px', borderTop: '1px solid rgba(56,189,248,0.2)', gap: '8px', flexWrap: 'wrap'}}>
-        <div style={{display: 'flex', gap: '8px'}}>
+        <div style={{display: 'flex', gap: '8px', flexWrap: 'wrap'}}>
           <button
             style={{background: '#38bdf8', color: '#000', padding: '8px 20px', fontWeight: 700, fontSize: '0.85rem', border: 'none', cursor: 'pointer'}}
             onClick={onReset}
@@ -747,13 +774,9 @@ const ResultPanel = ({ result, onReset }: { result: ZeitgeistResult; onReset: ()
           </button>
           <button
             style={{background: 'transparent', color: '#38bdf8', padding: '8px 20px', fontWeight: 700, fontSize: '0.85rem', border: '1px solid rgba(56,189,248,0.4)', cursor: 'pointer'}}
-            onClick={() => {
-              const text = `VibeCheck — ${result.groupName}\n\nDiagnosis: ${result.moodHeadline}\n\nSignals:\n${result.signals.map((s, i) => `0${i+1} ${s}`).join('\n')}\n\nTLDR: ${result.tldr}\n\nPowered by VibeCheck · built on Base`;
-              navigator.clipboard.writeText(text);
-              alert('Copied to clipboard!');
-            }}
+            onClick={handleShare}
           >
-            Copy Analysis
+            Share
           </button>
         </div>
         <a
@@ -762,7 +785,7 @@ const ResultPanel = ({ result, onReset }: { result: ZeitgeistResult; onReset: ()
           target="_blank"
           rel="noreferrer"
         >
-          Paid in {result.isClawdPayment ? "CLAWD" : "ETH"} · Verify ↗
+          Paid in {result.isClawdPayment ? "CLAWD" : "ETH"} · Verify
         </a>
       </div>
     </div>
