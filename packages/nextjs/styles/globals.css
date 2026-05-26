@@ -146,12 +146,29 @@ body::before {
 
 /* Glowing input focus */
 .vibe-input:focus {
-  box-shadow: 0 0 0 2px oklch(var(--vc-primary) / 0.3), 0 0 20px oklch(var(--vc-primary) / 0.2);
+  box-shadow: 0 0 0 2px oklch(var(--vc-primary) / 0.5), 0 0 30px oklch(var(--vc-primary) / 0.3), inset 0 0 20px oklch(var(--vc-primary) / 0.1);
+  border-color: var(--vc-primary-hex) !important;
+}
+
+.vibe-input::placeholder {
+  color: oklch(var(--vc-primary) / 0.4);
 }
 
 /* Animated submit button */
 .vibe-submit-btn:not(:disabled):hover {
   animation: glow 1s ease-in-out infinite alternate;
+  transform: translateY(-1px);
+}
+
+.vibe-submit-btn:not(:disabled):active {
+  transform: translateY(1px);
+  box-shadow: 0 0 20px var(--vc-primary-hex), inset 0 2px 4px rgba(0,0,0,0.3) !important;
+}
+
+/* Pulse animation for status dot */
+@keyframes pulse {
+  0%, 100% { opacity: 1; box-shadow: 0 0 10px var(--vc-primary-hex); }
+  50% { opacity: 0.5; box-shadow: 0 0 5px var(--vc-primary-hex); }
 }
 
 /* Signal list stagger animation */

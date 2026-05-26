@@ -346,10 +346,28 @@ const Home: NextPage = () => {
 
   return (
     <div className="flex flex-col items-center grow w-full px-4 pt-8 pb-24 font-mono">
-      <div style={{width: '100%', maxWidth: '900px'}}>
+      {/* Device bezel wrapper */}
+      <div style={{
+        width: '100%', 
+        maxWidth: '900px',
+        background: 'linear-gradient(145deg, #1a1a1a 0%, #0d0d0d 50%, #1a1a1a 100%)',
+        borderRadius: '24px',
+        padding: '20px',
+        boxShadow: 'inset 0 2px 4px rgba(255,255,255,0.1), inset 0 -2px 4px rgba(0,0,0,0.5), 0 20px 60px rgba(0,0,0,0.8)',
+        position: 'relative',
+      }}>
+        {/* Inner screen bezel */}
+        <div style={{
+          background: 'var(--vc-bg-hex)',
+          borderRadius: '8px',
+          padding: 'clamp(16px, 4vw, 32px)',
+          boxShadow: 'inset 0 0 40px rgba(0,0,0,0.8), 0 0 1px rgba(56,189,248,0.3)',
+          border: '2px solid oklch(var(--vc-primary) / 0.4)',
+          position: 'relative',
+        }}>
         {/* Header */}
         <header className="mb-8 text-center">
-          <h1 className="header-glow" style={{fontFamily: '"Playfair Display", serif', fontWeight: 900, fontStyle: 'italic', fontSize: 'clamp(4rem, 14vw, 8rem)', lineHeight: 1, color: '#ffffff'}}>VibeCheck</h1>
+          <h1 className="header-glow" style={{fontFamily: '"Playfair Display", serif', fontWeight: 900, fontStyle: 'italic', fontSize: 'clamp(4rem, 14vw, 8rem)', lineHeight: 1, color: '#ffffff', textShadow: '0 0 60px var(--vc-primary-hex), 0 0 120px oklch(var(--vc-primary) / 0.5)'}}>VibeCheck</h1>
           <div style={{height: '3px', background: 'var(--vc-primary-hex)', opacity: 0.8, marginBottom: '3px'}} />
           <div style={{height: '2px', background: 'var(--vc-primary-hex)', opacity: 0.5, marginBottom: '2px'}} />
           <div style={{height: '1px', background: 'var(--vc-primary-hex)', opacity: 0.25, marginBottom: '16px'}} />
@@ -359,7 +377,7 @@ const Home: NextPage = () => {
         </header>
 
         {/* Main card */}
-        <section className="vibe-card" style={{padding: 'clamp(24px, 5vw, 48px) clamp(20px, 4vw, 48px)', border: '1px solid oklch(var(--vc-primary) / 0.5)', boxShadow: '0 0 25px oklch(var(--vc-primary) / 0.18), inset 0 0 25px oklch(var(--vc-primary) / 0.04)'}}>
+        <section className="vibe-card" style={{padding: 'clamp(24px, 5vw, 48px) clamp(20px, 4vw, 48px)', border: '2px solid oklch(var(--vc-primary) / 0.6)', boxShadow: '0 0 40px oklch(var(--vc-primary) / 0.3), 0 0 80px oklch(var(--vc-primary) / 0.15), inset 0 0 30px oklch(var(--vc-primary) / 0.05)'}}>
           {pipeline.status === "input" || pipeline.status === "submitting" ? (
             <InputPanel
               groupName={groupName}
@@ -413,22 +431,35 @@ const Home: NextPage = () => {
         </section>
 
         {/* Synthwave scene */}
-        <div className="relative w-full h-40 mt-8 overflow-hidden">
-          {/* Grid floor */}
-          <div className="absolute bottom-0 left-0 right-0 h-24" style={{backgroundImage: `linear-gradient(oklch(var(--vc-primary) / 0.2) 1px, transparent 1px), linear-gradient(90deg, oklch(var(--vc-primary) / 0.2) 1px, transparent 1px)`, backgroundSize: '40px 20px', transform: 'perspective(180px) rotateX(50deg)', transformOrigin: 'bottom center'}} />
-          {/* Sun */}
-          <div className="absolute left-1/2 -translate-x-1/2" style={{bottom: '48px', width: '110px', height: '55px', background: `linear-gradient(to bottom, #ffffff 0%, var(--vc-primary-hex) 40%, var(--vc-primary-hex) 100%)`, clipPath: 'ellipse(50% 50% at 50% 100%)', overflow: 'hidden', boxShadow: `0 0 30px oklch(var(--vc-primary) / 0.4)`}}>
-            <div style={{position:'absolute',inset:0,backgroundImage:'repeating-linear-gradient(to bottom, transparent 0px, transparent 6px, var(--vc-bg-hex) 6px, var(--vc-bg-hex) 8px)'}} />
+        <div className="relative w-full h-48 mt-8 overflow-hidden">
+          {/* Grid floor with perspective */}
+          <div className="absolute bottom-0 left-0 right-0 h-28" style={{
+            backgroundImage: `linear-gradient(oklch(var(--vc-primary) / 0.3) 1px, transparent 1px), linear-gradient(90deg, oklch(var(--vc-primary) / 0.3) 1px, transparent 1px)`,
+            backgroundSize: '50px 24px',
+            transform: 'perspective(200px) rotateX(55deg)',
+            transformOrigin: 'bottom center'
+          }} />
+          {/* Sun with scanlines */}
+          <div className="absolute left-1/2 -translate-x-1/2" style={{bottom: '56px', width: '140px', height: '70px', background: `linear-gradient(to bottom, rgba(255,255,255,0.9) 0%, var(--vc-primary-hex) 30%, var(--vc-primary-hex) 100%)`, clipPath: 'ellipse(50% 50% at 50% 100%)', boxShadow: `0 0 60px oklch(var(--vc-primary) / 0.5), 0 0 100px oklch(var(--vc-primary) / 0.3)`}}>
+            <div style={{position: 'absolute', inset: 0, backgroundImage: 'repeating-linear-gradient(to bottom, transparent 0px, transparent 5px, var(--vc-bg-hex) 5px, var(--vc-bg-hex) 8px)'}} />
           </div>
-          {/* Mountains left */}
-          <div className="absolute bottom-10 left-0" style={{width:'45%', height:'60px', background:'oklch(var(--vc-primary) / 0.15)', clipPath:'polygon(0% 100%, 20% 20%, 40% 70%, 60% 10%, 80% 50%, 100% 100%)'}} />
-          {/* Mountains right */}
-          <div className="absolute bottom-10 right-0" style={{width:'45%', height:'60px', background:'oklch(var(--vc-primary) / 0.15)', clipPath:'polygon(0% 100%, 20% 50%, 40% 10%, 60% 70%, 80% 20%, 100% 100%)'}} />
+          {/* Wireframe mountains - left */}
+          <svg className="absolute bottom-12 left-0 w-[45%] h-20" viewBox="0 0 200 70" preserveAspectRatio="none" style={{opacity: 0.7}}>
+            <polyline points="0,70 25,30 45,50 70,15 95,45 120,25 145,55 175,35 200,70" fill="none" stroke="var(--vc-primary-hex)" strokeWidth="1.5" />
+            <polyline points="0,70 30,45 55,55 80,35 105,55 130,40 160,60 200,50 200,70" fill="none" stroke="var(--vc-primary-hex)" strokeWidth="1" opacity="0.5" />
+            <polyline points="0,70 20,55 50,60 75,50 100,60 125,52 155,65 200,58 200,70" fill="none" stroke="var(--vc-primary-hex)" strokeWidth="0.5" opacity="0.3" />
+          </svg>
+          {/* Wireframe mountains - right */}
+          <svg className="absolute bottom-12 right-0 w-[45%] h-20" viewBox="0 0 200 70" preserveAspectRatio="none" style={{opacity: 0.7}}>
+            <polyline points="0,35 25,55 55,20 80,45 105,10 135,40 165,25 200,70" fill="none" stroke="var(--vc-primary-hex)" strokeWidth="1.5" />
+            <polyline points="0,50 35,60 60,40 90,55 115,35 145,55 175,45 200,70" fill="none" stroke="var(--vc-primary-hex)" strokeWidth="1" opacity="0.5" />
+            <polyline points="0,58 40,65 70,55 100,62 130,52 160,62 190,55 200,70" fill="none" stroke="var(--vc-primary-hex)" strokeWidth="0.5" opacity="0.3" />
+          </svg>
         </div>
 
-        {/* Footer */}
-        <section className="mt-4 text-center font-mono space-y-3">
-          <p style={{fontSize: '10px', color: 'var(--vc-primary-hex)', opacity: 0.4}}>
+        {/* Footer status bar */}
+        <section className="mt-4 font-mono space-y-3">
+          <p style={{fontSize: '10px', color: 'var(--vc-primary-hex)', opacity: 0.4, textAlign: 'center'}}>
             Contract:{" "}
             <a href={`https://basescan.org/address/${ZEITGEIST_PAYMENT_ADDRESS}`} target="_blank" rel="noreferrer" style={{textDecoration: 'underline'}}>
               {ZEITGEIST_PAYMENT_ADDRESS.slice(0, 6)}...{ZEITGEIST_PAYMENT_ADDRESS.slice(-4)}
@@ -439,14 +470,36 @@ const Home: NextPage = () => {
               {CLAWD_ADDRESS.slice(0, 6)}...{CLAWD_ADDRESS.slice(-4)}
             </a>
           </p>
-          <div style={{border: '1px solid oklch(var(--vc-primary) / 0.25)', padding: '10px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between'}}>
-            <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
-              <span style={{width: '8px', height: '8px', borderRadius: '50%', background: 'var(--vc-primary-hex)', display: 'inline-block', animation: 'pulse 2s infinite'}} />
-              <span style={{fontSize: '10px', color: 'var(--vc-primary-hex)', opacity: 0.5, letterSpacing: '0.1em', textTransform: 'uppercase'}}>VIBECHECK v1.0.0</span>
+          <div style={{
+            border: '2px solid oklch(var(--vc-primary) / 0.4)', 
+            padding: '12px 16px', 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'space-between',
+            background: 'oklch(var(--vc-primary) / 0.03)',
+            boxShadow: '0 0 20px oklch(var(--vc-primary) / 0.15)'
+          }}>
+            <div style={{display: 'flex', alignItems: 'center', gap: '10px'}}>
+              <span style={{width: '8px', height: '8px', borderRadius: '50%', background: 'var(--vc-primary-hex)', display: 'inline-block', boxShadow: '0 0 10px var(--vc-primary-hex)', animation: 'pulse 2s infinite'}} />
+              <div>
+                <span style={{fontSize: '10px', color: 'var(--vc-primary-hex)', letterSpacing: '0.1em', textTransform: 'uppercase', display: 'block'}}>VIBECHECK v1.0.0</span>
+                <span style={{fontSize: '9px', color: 'var(--vc-primary-hex)', opacity: 0.5, letterSpacing: '0.1em', textTransform: 'uppercase'}}>CONSCIOUSNESS NETWORK ONLINE</span>
+              </div>
             </div>
-            <span style={{fontSize: '10px', color: 'var(--vc-primary-hex)', opacity: 0.5, letterSpacing: '0.1em', textTransform: 'uppercase'}}>CONSCIOUSNESS NETWORK ONLINE</span>
+            {/* Signal bars */}
+            <div style={{display: 'flex', gap: '2px', alignItems: 'flex-end'}}>
+              {[4, 6, 8, 10, 12, 14, 12, 10, 8, 10, 12, 14].map((h, i) => (
+                <div key={i} style={{width: '4px', height: `${h}px`, background: 'var(--vc-primary-hex)', opacity: i < 10 ? 1 : 0.5}} />
+              ))}
+            </div>
           </div>
         </section>
+        </div>
+        {/* Bezel bottom label */}
+        <div style={{display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginTop: '12px', paddingRight: '16px'}}>
+          <span style={{fontSize: '12px', color: 'rgba(255,255,255,0.3)', letterSpacing: '0.2em', fontFamily: 'monospace'}}>VC-1977</span>
+          <span style={{width: '10px', height: '10px', borderRadius: '50%', background: 'var(--vc-primary-hex)', marginLeft: '12px', boxShadow: '0 0 8px var(--vc-primary-hex)'}} />
+        </div>
       </div>
       <ColorCustomizer />
     </div>
@@ -525,17 +578,29 @@ const InputPanel = ({
         <input
           type="text"
           value={groupName}
-          onChange={e => setGroupName(e.target.value)}
-          placeholder='e.g. "BNKR token", "farcaster maxis", "crypto degens"'
+          onChange={(e) => setGroupName(e.target.value)}
+          placeholder='e.g. NFTs, Monday mornings, vaporwave...'
           maxLength={120}
           className="vibe-input"
-          style={{width: '100%', background: 'rgba(0,0,0,0.6)', border: '1px solid oklch(var(--vc-primary) / 0.4)', padding: '18px 20px', textAlign: 'center', fontSize: 'clamp(1rem, 2.5vw, 1.2rem)', color: '#ffffff', fontFamily: 'Space Mono, monospace', outline: 'none', transition: 'box-shadow 0.3s'}}
+          style={{
+            width: '100%', 
+            background: 'rgba(0,0,0,0.7)', 
+            border: '2px solid oklch(var(--vc-primary) / 0.5)', 
+            padding: '18px 20px', 
+            textAlign: 'center', 
+            fontSize: 'clamp(1rem, 2.5vw, 1.2rem)', 
+            color: 'var(--vc-primary-hex)', 
+            fontFamily: 'Space Mono, monospace', 
+            outline: 'none', 
+            transition: 'all 0.3s',
+            boxShadow: '0 0 20px oklch(var(--vc-primary) / 0.1), inset 0 0 20px oklch(var(--vc-primary) / 0.05)',
+          }}
         />
       </div>
 
       {/* Mode buttons */}
       <div>
-        <div style={{display: 'flex', gap: '0', border: '1px solid oklch(var(--vc-primary) / 0.3)'}}>
+        <div style={{display: 'flex', gap: '8px'}}>
           {(["meme", "basic", "technical"] as const).map((m) => (
             <button
               key={m}
@@ -544,15 +609,18 @@ const InputPanel = ({
               style={{
                 flex: 1,
                 padding: '14px 0',
-                fontSize: '0.9rem',
+                fontSize: '0.85rem',
                 fontWeight: 700,
                 letterSpacing: '0.1em',
                 textTransform: 'uppercase',
                 transition: 'all 0.2s',
                 background: analysisMode === m ? 'var(--vc-primary-hex)' : 'transparent',
                 color: analysisMode === m ? '#000000' : 'var(--vc-primary-hex)',
-                border: 'none',
+                border: analysisMode === m ? '2px solid var(--vc-primary-hex)' : '2px solid oklch(var(--vc-primary) / 0.4)',
                 cursor: 'pointer',
+                boxShadow: analysisMode === m 
+                  ? '0 0 20px oklch(var(--vc-primary) / 0.4), inset 0 2px 4px rgba(255,255,255,0.2)' 
+                  : 'inset 0 2px 4px rgba(0,0,0,0.3)',
               }}
             >
               {m}
