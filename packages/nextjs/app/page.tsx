@@ -647,18 +647,25 @@ const InputPanel = ({
       ) : (
         <button
           type="button"
-          className="w-full font-bold transition-colors disabled:cursor-not-allowed vibe-submit-btn"
-          style={submitDisabled ? {padding: '20px', fontSize: 'clamp(1rem, 2.5vw, 1.3rem)', letterSpacing: '0.05em', background: 'oklch(var(--vc-primary) / 0.2)', color: 'var(--vc-primary-hex)', opacity: 0.4} : {padding: '20px', fontSize: 'clamp(1rem, 2.5vw, 1.3rem)', letterSpacing: '0.05em', background: 'var(--vc-primary-hex)', color: '#000000'}}
+          className="w-full font-bold transition-all disabled:cursor-not-allowed vibe-submit-btn flex items-center justify-center gap-3"
+          style={submitDisabled 
+            ? {padding: '20px', fontSize: 'clamp(1rem, 2.5vw, 1.3rem)', letterSpacing: '0.1em', textTransform: 'uppercase', background: 'oklch(var(--vc-primary) / 0.2)', color: 'var(--vc-primary-hex)', opacity: 0.4, border: 'none'} 
+            : {padding: '20px', fontSize: 'clamp(1rem, 2.5vw, 1.3rem)', letterSpacing: '0.1em', textTransform: 'uppercase', background: 'var(--vc-primary-hex)', color: '#000000', boxShadow: '0 0 40px var(--vc-primary-hex), 0 0 80px oklch(var(--vc-primary) / 0.6)', border: 'none'}}
           onClick={onSubmit}
           disabled={submitDisabled}
         >
-          {submitting
-            ? "Transmitting..."
-            : insufficientFunds
-              ? `Insufficient ${paymentMode}`
-                : !groupName.trim()
-                  ? "Check Vibe"
-                  : "Check Vibe"}
+          <span>
+            {submitting
+              ? "TRANSMITTING…"
+              : insufficientFunds
+                ? `INSUFFICIENT ${paymentMode}`
+                : "CHECK VIBE"}
+          </span>
+          {!submitting && !insufficientFunds && !submitDisabled && (
+            <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <path d="M5 12h14M12 5l7 7-7 7"/>
+            </svg>
+          )}
         </button>
       )}
 
