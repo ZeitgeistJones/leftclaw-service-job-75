@@ -30,14 +30,18 @@ type Pipeline =
 
 type ZeitgeistResult = {
   groupName: string;
+  topicType?: "token" | "community";
   imageUrl: string;
+  imageMode?: "sharecard" | "leftclaw" | "recraft" | "none";
   moodHeadline: string;
   signals: string[];
   tldr: string;
+  analysis?: string;
+  confidence?: "high" | "medium" | "low";
+  sources?: { label: string; url: string }[];
   generatedAt: number;
   txHash: `0x${string}`;
   isClawdPayment: boolean;
-  lowConfidence: boolean;
   cached: boolean;
 };
 
@@ -197,7 +201,7 @@ const Home: NextPage = () => {
       return;
     }
     const apiBase = process.env.NEXT_PUBLIC_API_URL || "";
-    const url = `${apiBase}/api/zeitgeist?txHash=${pipeline.txHash}&groupName=${encodeURIComponent(groupName)}&mode=${analysisMode}`;
+    const url = `${apiBase}/api/zeitgeist?txHash=${pipeline.txHash}&groupName=${encodeURIComponent(groupName)}&mode=${analysisMode}&imageMode=sharecard`;
     let cancelled = false;
 
     const poll = async () => {
@@ -209,6 +213,16 @@ const Home: NextPage = () => {
           setPipeline({ status: "result", result: data });
           return;
         }
+        // 202 = payment pending or pipeline still running — keep polling
+        if (res.status === 202) return;
+        if (res.status === 429) {
+          const body = (await res.json()) as { error?: string };
+          setPipeline({
+            status: "error",
+            message: body.error || "Rate limit exceeded. Try again in a minute.",
+          });
+          return;
+        }
         if (res.status === 503) {
           const body = (await res.json()) as { error?: string };
           setPipeline({
@@ -216,6 +230,7 @@ const Home: NextPage = () => {
             message: body.error || "Backend not configured.",
           });
         }
+        // 402 while receipt/event settles — keep polling; hard failures surface after timeout via user reset
       } catch {
         // network blip — keep polling
       }
@@ -680,6 +695,9 @@ const LoadingPanel = ({
 
 const ResultPanel = ({ result, onReset }: { result: ZeitgeistResult; onReset: () => void }) => {
   const ageHours = Math.floor((Date.now() / 1000 - result.generatedAt) / 3_600);
+  const confidence = result.confidence ?? (result.signals.length < 3 ? "low" : "medium");
+  const confidenceColor =
+    confidence === "high" ? "#4ade80" : confidence === "medium" ? "#facc15" : "#f87171";
 
   const handleShare = async () => {
     const shareText = `VibeCheck — ${result.groupName}\n\nDiagnosis: ${result.moodHeadline}\n\nTLDR: ${result.tldr}\n\nPowered by VibeCheck · built on Base`;
@@ -688,14 +706,16 @@ const ResultPanel = ({ result, onReset }: { result: ZeitgeistResult; onReset: ()
       try {
         const response = await fetch(result.imageUrl);
         const blob = await response.blob();
-        const file = new File([blob], `vibecheck-${result.groupName.replace(/\s+/g, "-").toLowerCase()}.png`, { type: blob.type });
+        const file = new File([blob], `vibecheck-${result.groupName.replace(/\s+/g, "-").toLowerCase()}.png`, {
+          type: blob.type,
+        });
 
         await navigator.share({
           title: `VibeCheck: ${result.groupName}`,
           text: shareText,
           files: [file],
         });
-      } catch (err) {
+      } catch {
         // Web Share failed, fall back to clipboard
         navigator.clipboard.writeText(shareText);
         notification.success("Copied to clipboard!");
@@ -708,26 +728,50 @@ const ResultPanel = ({ result, onReset }: { result: ZeitgeistResult; onReset: ()
 
   return (
     <div className="space-y-6">
-      <div className="flex items-end justify-between border-b pb-4" style={{borderColor: 'oklch(var(--vc-primary) / 0.2)'}}>
+      <div className="flex items-end justify-between border-b pb-4" style={{ borderColor: "oklch(var(--vc-primary) / 0.2)" }}>
         <div>
           <p className="text-[10px] uppercase tracking-[0.2em] opacity-40 mb-1">
             Vibe #{result.generatedAt.toString().slice(-4)}
+            {result.topicType ? ` · ${result.topicType}` : ""}
           </p>
-          <h2 style={{fontSize: 'clamp(1.5rem, 5vw, 2.5rem)', fontWeight: 900, fontStyle: 'italic', color: '#ffffff'}}>{result.groupName}</h2>
+          <h2
+            style={{
+              fontSize: "clamp(1.5rem, 5vw, 2.5rem)",
+              fontWeight: 900,
+              fontStyle: "italic",
+              color: "#ffffff",
+            }}
+          >
+            {result.groupName}
+          </h2>
         </div>
-        <span className="text-[10px] opacity-40 uppercase">
-          {result.cached ? `Cached ${ageHours}h` : "Live Signal"}
-        </span>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "6px" }}>
+          <span
+            style={{
+              fontSize: "10px",
+              textTransform: "uppercase",
+              letterSpacing: "0.1em",
+              color: confidenceColor,
+              border: `1px solid ${confidenceColor}55`,
+              padding: "2px 8px",
+            }}
+          >
+            {confidence} confidence
+          </span>
+          <span className="text-[10px] opacity-40 uppercase">
+            {result.cached ? `Cached ${ageHours}h` : "Live Signal"}
+          </span>
+        </div>
       </div>
 
-      {result.lowConfidence ? (
+      {confidence === "low" ? (
         <div className="border border-yellow-500/30 bg-yellow-500/10 p-3 text-xs text-yellow-300">
           Low confidence — not enough fresh signal found. Take with extra salt.
         </div>
       ) : null}
 
       {result.imageUrl ? (
-        <div className="relative border-2" style={{borderColor: 'oklch(var(--vc-primary) / 0.2)'}}>
+        <div className="relative border-2" style={{ borderColor: "oklch(var(--vc-primary) / 0.2)" }}>
           <Image
             src={result.imageUrl}
             alt={`Vibe snapshot of ${result.groupName}`}
@@ -741,54 +785,267 @@ const ResultPanel = ({ result, onReset }: { result: ZeitgeistResult; onReset: ()
             href={result.imageUrl}
             download={`vibecheck-${result.groupName.replace(/\s+/g, "-").toLowerCase()}.png`}
             className="absolute top-2 right-2 text-[10px] bg-black/80 border px-2 py-1 hover:opacity-80 transition-colors"
-            style={{borderColor: 'oklch(var(--vc-primary) / 0.3)', color: 'var(--vc-primary-hex)'}}
+            style={{ borderColor: "oklch(var(--vc-primary) / 0.3)", color: "var(--vc-primary-hex)" }}
           >
             Download
           </a>
         </div>
-      ) : null}
+      ) : (
+        <div
+          style={{
+            border: "1px solid oklch(var(--vc-primary) / 0.35)",
+            background: "linear-gradient(145deg, oklch(var(--vc-primary) / 0.12), rgba(0,0,0,0.55))",
+            padding: "clamp(20px, 4vw, 36px)",
+          }}
+        >
+          <p
+            style={{
+              fontSize: "10px",
+              textTransform: "uppercase",
+              letterSpacing: "0.2em",
+              color: "var(--vc-primary-hex)",
+              opacity: 0.7,
+              marginBottom: "12px",
+            }}
+          >
+            VibeCheck Sharecard
+          </p>
+          <p
+            style={{
+              fontSize: "clamp(1.4rem, 4vw, 2rem)",
+              fontWeight: 800,
+              fontStyle: "italic",
+              color: "#fff",
+              marginBottom: "8px",
+            }}
+          >
+            {result.groupName}
+          </p>
+          <p
+            style={{
+              fontSize: "clamp(1.1rem, 3vw, 1.4rem)",
+              color: "var(--vc-primary-hex)",
+              fontStyle: "italic",
+              marginBottom: "16px",
+            }}
+          >
+            &ldquo;{result.moodHeadline}&rdquo;
+          </p>
+          <ul style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+            {result.signals.slice(0, 3).map((s, i) => (
+              <li key={i} style={{ fontSize: "0.85rem", color: "#e0f2fe", opacity: 0.85 }}>
+                · {s}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <div>
-        <p style={{fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.2em', color: 'var(--vc-primary-hex)', marginBottom: '8px', opacity: 0.7}}>Diagnosis</p>
-        <p style={{fontSize: 'clamp(1.2rem, 4vw, 1.8rem)', fontWeight: 700, color: 'var(--vc-primary-hex)', fontStyle: 'italic', lineHeight: 1.3}}>"{result.moodHeadline}"</p>
+        <p
+          style={{
+            fontSize: "11px",
+            textTransform: "uppercase",
+            letterSpacing: "0.2em",
+            color: "var(--vc-primary-hex)",
+            marginBottom: "8px",
+            opacity: 0.7,
+          }}
+        >
+          Diagnosis
+        </p>
+        <p
+          style={{
+            fontSize: "clamp(1.2rem, 4vw, 1.8rem)",
+            fontWeight: 700,
+            color: "var(--vc-primary-hex)",
+            fontStyle: "italic",
+            lineHeight: 1.3,
+          }}
+        >
+          &ldquo;{result.moodHeadline}&rdquo;
+        </p>
       </div>
 
       {result.signals.length > 0 ? (
         <div>
-          <p style={{fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.2em', color: 'var(--vc-primary-hex)', marginBottom: '12px', opacity: 0.7}}>Signals</p>
-          <ul style={{display: 'flex', flexDirection: 'column', gap: '10px'}}>
+          <p
+            style={{
+              fontSize: "11px",
+              textTransform: "uppercase",
+              letterSpacing: "0.2em",
+              color: "var(--vc-primary-hex)",
+              marginBottom: "12px",
+              opacity: 0.7,
+            }}
+          >
+            Signals
+          </p>
+          <ul style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
             {result.signals.map((s, i) => (
-              <li key={i} className="signal-item" style={{display: 'flex', gap: '14px', fontSize: 'clamp(0.9rem, 2.5vw, 1.05rem)', lineHeight: 1.6}}>
-                <span style={{color: 'var(--vc-primary-hex)', fontFamily: 'Space Mono, monospace', flexShrink: 0}}>0{i + 1}</span>
-                <span style={{color: '#e0f2fe'}}>{s}</span>
+              <li
+                key={i}
+                className="signal-item"
+                style={{ display: "flex", gap: "14px", fontSize: "clamp(0.9rem, 2.5vw, 1.05rem)", lineHeight: 1.6 }}
+              >
+                <span style={{ color: "var(--vc-primary-hex)", fontFamily: "Space Mono, monospace", flexShrink: 0 }}>
+                  0{i + 1}
+                </span>
+                <span style={{ color: "#e0f2fe" }}>{s}</span>
               </li>
             ))}
           </ul>
         </div>
       ) : null}
 
-      <div style={{borderLeft: '2px solid oklch(var(--vc-primary) / 0.3)', paddingLeft: '16px', background: 'oklch(var(--vc-primary) / 0.05)', padding: '12px 16px'}}>
-        <p style={{fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.2em', color: 'var(--vc-primary-hex)', marginBottom: '6px', opacity: 0.7}}>TLDR</p>
-        <p style={{fontSize: 'clamp(0.95rem, 2.5vw, 1.05rem)', lineHeight: 1.7, color: '#e0f2fe', fontStyle: 'italic'}}>"{result.tldr}"</p>
+      <div
+        style={{
+          borderLeft: "2px solid oklch(var(--vc-primary) / 0.3)",
+          paddingLeft: "16px",
+          background: "oklch(var(--vc-primary) / 0.05)",
+          padding: "12px 16px",
+        }}
+      >
+        <p
+          style={{
+            fontSize: "11px",
+            textTransform: "uppercase",
+            letterSpacing: "0.2em",
+            color: "var(--vc-primary-hex)",
+            marginBottom: "6px",
+            opacity: 0.7,
+          }}
+        >
+          TLDR
+        </p>
+        <p style={{ fontSize: "clamp(0.95rem, 2.5vw, 1.05rem)", lineHeight: 1.7, color: "#e0f2fe", fontStyle: "italic" }}>
+          &ldquo;{result.tldr}&rdquo;
+        </p>
       </div>
 
-      <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '16px', borderTop: '1px solid oklch(var(--vc-primary) / 0.2)', gap: '8px', flexWrap: 'wrap'}}>
-        <div style={{display: 'flex', gap: '8px', flexWrap: 'wrap'}}>
+      {result.analysis ? (
+        <div>
+          <p
+            style={{
+              fontSize: "11px",
+              textTransform: "uppercase",
+              letterSpacing: "0.2em",
+              color: "var(--vc-primary-hex)",
+              marginBottom: "8px",
+              opacity: 0.7,
+            }}
+          >
+            Analysis
+          </p>
+          <p
+            style={{
+              fontSize: "clamp(0.9rem, 2.5vw, 1rem)",
+              lineHeight: 1.75,
+              color: "#e0f2fe",
+              whiteSpace: "pre-wrap",
+              opacity: 0.9,
+            }}
+          >
+            {result.analysis}
+          </p>
+        </div>
+      ) : null}
+
+      {result.sources && result.sources.length > 0 ? (
+        <div>
+          <p
+            style={{
+              fontSize: "11px",
+              textTransform: "uppercase",
+              letterSpacing: "0.2em",
+              color: "var(--vc-primary-hex)",
+              marginBottom: "8px",
+              opacity: 0.7,
+            }}
+          >
+            Sources
+          </p>
+          <ul style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+            {result.sources
+              .filter(src => {
+                try {
+                  const u = new URL(src.url);
+                  return u.protocol === "http:" || u.protocol === "https:";
+                } catch {
+                  return false;
+                }
+              })
+              .map((src, i) => (
+              <li key={i}>
+                <a
+                  href={src.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{
+                    fontSize: "0.85rem",
+                    color: "var(--vc-primary-hex)",
+                    textDecoration: "underline",
+                    textUnderlineOffset: "3px",
+                    opacity: 0.85,
+                  }}
+                >
+                  {src.label || src.url}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          paddingTop: "16px",
+          borderTop: "1px solid oklch(var(--vc-primary) / 0.2)",
+          gap: "8px",
+          flexWrap: "wrap",
+        }}
+      >
+        <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
           <button
-            style={{background: 'var(--vc-primary-hex)', color: '#000', padding: '8px 20px', fontWeight: 700, fontSize: '0.85rem', border: 'none', cursor: 'pointer'}}
+            style={{
+              background: "var(--vc-primary-hex)",
+              color: "#000",
+              padding: "8px 20px",
+              fontWeight: 700,
+              fontSize: "0.85rem",
+              border: "none",
+              cursor: "pointer",
+            }}
             onClick={onReset}
           >
             New Scan
           </button>
           <button
-            style={{background: 'transparent', color: 'var(--vc-primary-hex)', padding: '8px 20px', fontWeight: 700, fontSize: '0.85rem', border: '1px solid oklch(var(--vc-primary) / 0.4)', cursor: 'pointer'}}
+            style={{
+              background: "transparent",
+              color: "var(--vc-primary-hex)",
+              padding: "8px 20px",
+              fontWeight: 700,
+              fontSize: "0.85rem",
+              border: "1px solid oklch(var(--vc-primary) / 0.4)",
+              cursor: "pointer",
+            }}
             onClick={handleShare}
           >
             Share
           </button>
         </div>
         <a
-          style={{fontSize: '10px', color: 'var(--vc-primary-hex)', opacity: 0.6, textTransform: 'uppercase', letterSpacing: '0.1em'}}
+          style={{
+            fontSize: "10px",
+            color: "var(--vc-primary-hex)",
+            opacity: 0.6,
+            textTransform: "uppercase",
+            letterSpacing: "0.1em",
+          }}
           href={`https://basescan.org/tx/${result.txHash}`}
           target="_blank"
           rel="noreferrer"
