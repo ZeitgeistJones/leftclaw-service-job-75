@@ -360,21 +360,24 @@ const Home: NextPage = () => {
   const formattedClawdBalance = Number(formatUnits(clawdBalance, clawdDecimals)).toLocaleString();
 
   return (
-    <div className="flex flex-col items-center grow w-full px-4 pt-8 pb-24 font-mono">
-      <div style={{width: '100%', maxWidth: '900px'}}>
-        {/* Header */}
-        <header className="mb-8 text-center">
-          <h1 className="header-glow" style={{fontFamily: '"Playfair Display", serif', fontWeight: 900, fontStyle: 'italic', fontSize: 'clamp(4rem, 14vw, 8rem)', lineHeight: 1, color: '#ffffff'}}>VibeCheck</h1>
-          <div style={{height: '3px', background: 'var(--vc-primary-hex)', opacity: 0.8, marginBottom: '3px'}} />
-          <div style={{height: '2px', background: 'var(--vc-primary-hex)', opacity: 0.5, marginBottom: '2px'}} />
-          <div style={{height: '1px', background: 'var(--vc-primary-hex)', opacity: 0.25, marginBottom: '16px'}} />
-          <p style={{fontSize: '0.75rem', color: 'var(--vc-primary-hex)', opacity: 0.7, letterSpacing: '0.15em', textTransform: 'uppercase'}}>
-            Diagnosing the collective unconscious since today.
-          </p>
+    <div className="flex flex-col items-center grow w-full px-4 pt-8 pb-24" style={{ color: "var(--vc-ink)" }}>
+      <div style={{ width: "100%", maxWidth: "720px" }}>
+        <header className="mb-10 text-center">
+          <h1 className="masthead" style={{ fontSize: "clamp(3.2rem, 12vw, 6.5rem)", lineHeight: 0.92 }}>
+            VibeCheck
+          </h1>
+          <div
+            style={{
+              height: "6px",
+              width: "72px",
+              background: "var(--vc-primary-hex)",
+              margin: "14px auto 16px",
+            }}
+          />
+          <p className="label-meta">No bullshit. Just vibes.</p>
         </header>
 
-        {/* Main card */}
-        <section className="vibe-card" style={{padding: 'clamp(24px, 5vw, 48px) clamp(20px, 4vw, 48px)', border: '1px solid oklch(var(--vc-primary) / 0.5)', boxShadow: '0 0 25px oklch(var(--vc-primary) / 0.18), inset 0 0 25px oklch(var(--vc-primary) / 0.04)'}}>
+        <section className="vibe-card" style={{ padding: "clamp(24px, 5vw, 40px) clamp(18px, 4vw, 36px)" }}>
           {pipeline.status === "input" || pipeline.status === "submitting" ? (
             <InputPanel
               groupName={groupName}
@@ -417,49 +420,61 @@ const Home: NextPage = () => {
 
           {pipeline.status === "error" ? (
             <div className="space-y-4">
-              <div className="border border-red-500/40 bg-red-500/10 p-4 text-sm text-red-300">
+              <div
+                className="p-4 text-sm"
+                style={{ border: "var(--vc-border)", background: "#fff", color: "#b91c1c" }}
+              >
                 {pipeline.message}
               </div>
-              <button className="w-full border border-primary/40 bg-primary/10 text-primary py-3 hover:bg-primary/20 transition-colors" onClick={reset}>
+              <button
+                type="button"
+                className="w-full py-3 font-bold uppercase tracking-wider"
+                style={{ border: "var(--vc-border)", background: "var(--vc-primary-hex)", color: "var(--vc-ink)" }}
+                onClick={reset}
+              >
                 Back to start
               </button>
             </div>
           ) : null}
         </section>
 
-        {/* Synthwave scene */}
-        <div className="relative w-full h-40 mt-8 overflow-hidden">
-          {/* Grid floor */}
-          <div className="absolute bottom-0 left-0 right-0 h-24" style={{backgroundImage: `linear-gradient(oklch(var(--vc-primary) / 0.2) 1px, transparent 1px), linear-gradient(90deg, oklch(var(--vc-primary) / 0.2) 1px, transparent 1px)`, backgroundSize: '40px 20px', transform: 'perspective(180px) rotateX(50deg)', transformOrigin: 'bottom center'}} />
-          {/* Sun */}
-          <div className="absolute left-1/2 -translate-x-1/2" style={{bottom: '48px', width: '110px', height: '55px', background: `linear-gradient(to bottom, #ffffff 0%, var(--vc-primary-hex) 40%, var(--vc-primary-hex) 100%)`, clipPath: 'ellipse(50% 50% at 50% 100%)', overflow: 'hidden', boxShadow: `0 0 30px oklch(var(--vc-primary) / 0.4)`}}>
-            <div style={{position:'absolute',inset:0,backgroundImage:'repeating-linear-gradient(to bottom, transparent 0px, transparent 6px, var(--vc-bg-hex) 6px, var(--vc-bg-hex) 8px)'}} />
-          </div>
-          {/* Mountains left */}
-          <div className="absolute bottom-10 left-0" style={{width:'45%', height:'60px', background:'oklch(var(--vc-primary) / 0.15)', clipPath:'polygon(0% 100%, 20% 20%, 40% 70%, 60% 10%, 80% 50%, 100% 100%)'}} />
-          {/* Mountains right */}
-          <div className="absolute bottom-10 right-0" style={{width:'45%', height:'60px', background:'oklch(var(--vc-primary) / 0.15)', clipPath:'polygon(0% 100%, 20% 50%, 40% 10%, 60% 70%, 80% 20%, 100% 100%)'}} />
-        </div>
-
-        {/* Footer */}
-        <section className="mt-4 text-center font-mono space-y-3">
-          <p style={{fontSize: '10px', color: 'var(--vc-primary-hex)', opacity: 0.4}}>
+        <section className="mt-8 space-y-3">
+          <p className="label-meta text-center" style={{ lineHeight: 1.6 }}>
             Contract:{" "}
-            <a href={`https://basescan.org/address/${ZEITGEIST_PAYMENT_ADDRESS}`} target="_blank" rel="noreferrer" style={{textDecoration: 'underline'}}>
+            <a
+              href={`https://basescan.org/address/${ZEITGEIST_PAYMENT_ADDRESS}`}
+              target="_blank"
+              rel="noreferrer"
+              style={{ color: "var(--vc-ink)", textDecoration: "underline" }}
+            >
               {ZEITGEIST_PAYMENT_ADDRESS.slice(0, 6)}...{ZEITGEIST_PAYMENT_ADDRESS.slice(-4)}
             </a>
             {" · "}
             CLAWD:{" "}
-            <a href={`https://basescan.org/address/${CLAWD_ADDRESS}`} target="_blank" rel="noreferrer" style={{textDecoration: 'underline'}}>
+            <a
+              href={`https://basescan.org/address/${CLAWD_ADDRESS}`}
+              target="_blank"
+              rel="noreferrer"
+              style={{ color: "var(--vc-ink)", textDecoration: "underline" }}
+            >
               {CLAWD_ADDRESS.slice(0, 6)}...{CLAWD_ADDRESS.slice(-4)}
             </a>
           </p>
-          <div style={{border: '1px solid oklch(var(--vc-primary) / 0.25)', padding: '10px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between'}}>
-            <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
-              <span style={{width: '8px', height: '8px', borderRadius: '50%', background: 'var(--vc-primary-hex)', display: 'inline-block', animation: 'pulse 2s infinite'}} />
-              <span style={{fontSize: '10px', color: 'var(--vc-primary-hex)', opacity: 0.5, letterSpacing: '0.1em', textTransform: 'uppercase'}}>VIBECHECK v1.0.0</span>
-            </div>
-            <span style={{fontSize: '10px', color: 'var(--vc-primary-hex)', opacity: 0.5, letterSpacing: '0.1em', textTransform: 'uppercase'}}>CONSCIOUSNESS NETWORK ONLINE</span>
+          <div
+            style={{
+              border: "var(--vc-border)",
+              padding: "10px 16px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: "12px",
+              background: "#fff",
+            }}
+          >
+            <span className="label-meta" style={{ color: "var(--vc-ink)" }}>
+              VibeCheck v2
+            </span>
+            <span className="label-meta">Cached 24h · Base</span>
           </div>
         </section>
       </div>
@@ -535,40 +550,38 @@ const InputPanel = ({
 
   return (
     <div className="space-y-6">
-      <div className="text-center">
-        <p style={{fontSize: 'clamp(1.5rem, 4vw, 2rem)', fontWeight: 700, color: '#ffffff', marginBottom: '1.2rem', fontFamily: '"Playfair Display", serif', fontStyle: 'italic'}}>Check the vibe of...</p>
+      <div>
+        <p className="label-meta mb-3">
+          <label htmlFor="vibecheck-topic">What&apos;s the vibe?</label>
+        </p>
         <input
+          id="vibecheck-topic"
           type="text"
           value={groupName}
           onChange={e => setGroupName(e.target.value)}
           placeholder='e.g. "BNKR token", "farcaster maxis", "crypto degens"'
           maxLength={120}
           className="vibe-input"
-          style={{width: '100%', background: 'rgba(0,0,0,0.6)', border: '1px solid oklch(var(--vc-primary) / 0.4)', padding: '18px 20px', textAlign: 'center', fontSize: 'clamp(1rem, 2.5vw, 1.2rem)', color: '#ffffff', fontFamily: 'Space Mono, monospace', outline: 'none', transition: 'box-shadow 0.3s'}}
+          style={{
+            width: "100%",
+            padding: "18px 20px",
+            textAlign: "left",
+            fontSize: "clamp(1rem, 2.5vw, 1.15rem)",
+          }}
         />
       </div>
 
-      {/* Mode buttons */}
       <div>
-        <div style={{display: 'flex', gap: '0', border: '1px solid oklch(var(--vc-primary) / 0.3)'}}>
-          {(["meme", "basic", "technical"] as const).map((m) => (
+        <p className="label-meta mb-2">Mode</p>
+        <div className="vibe-seg">
+          {(["meme", "basic", "technical"] as const).map(m => (
             <button
               key={m}
               type="button"
+              data-active={analysisMode === m}
+              aria-pressed={analysisMode === m}
               onClick={() => setAnalysisMode(m)}
-              style={{
-                flex: 1,
-                padding: '14px 0',
-                fontSize: '0.9rem',
-                fontWeight: 700,
-                letterSpacing: '0.1em',
-                textTransform: 'uppercase',
-                transition: 'all 0.2s',
-                background: analysisMode === m ? 'var(--vc-primary-hex)' : 'transparent',
-                color: analysisMode === m ? '#000000' : 'var(--vc-primary-hex)',
-                border: 'none',
-                cursor: 'pointer',
-              }}
+              style={{ padding: "14px 0", fontSize: "0.85rem" }}
             >
               {m}
             </button>
@@ -577,23 +590,26 @@ const InputPanel = ({
       </div>
 
       <div>
-        <div className="flex items-center justify-between mb-2 text-xs px-1" style={{color: 'var(--vc-primary-hex)', opacity: 0.6}}>
-          <span className="uppercase tracking-widest">Transmission Fee</span>
-          <span>5,000 CLAWD / ~$0.25 ETH</span>
+        <div className="flex items-center justify-between mb-2">
+          <span className="label-meta">Pay with</span>
+          <span className="label-meta">5,000 CLAWD / ~$0.25 ETH</span>
         </div>
-        <div className="flex" style={{border: '1px solid oklch(var(--vc-primary) / 0.3)'}}>
+        <div className="vibe-seg">
           <button
             type="button"
-            className="flex-1 py-3 text-sm font-bold transition-colors"
-            style={paymentMode === "ETH" ? {background: 'var(--vc-primary-hex)', color: '#000'} : {background: 'transparent', color: 'var(--vc-primary-hex)', border: '1px solid oklch(var(--vc-primary) / 0.4)'}}
+            data-active={paymentMode === "ETH"}
+            aria-pressed={paymentMode === "ETH"}
+            style={{ padding: "12px 0", fontSize: "0.85rem" }}
             onClick={() => setPaymentMode("ETH")}
           >
             ETH
           </button>
           <button
             type="button"
-            className="flex-1 py-3 text-sm font-bold flex items-center justify-center gap-2 transition-colors"
-            style={paymentMode === "CLAWD" ? {background: 'var(--vc-primary-hex)', color: '#000'} : {background: 'transparent', color: 'var(--vc-primary-hex)', opacity: 0.7}}
+            data-active={paymentMode === "CLAWD"}
+            aria-pressed={paymentMode === "CLAWD"}
+            className="flex items-center justify-center gap-2"
+            style={{ padding: "12px 0", fontSize: "0.85rem" }}
             onClick={() => setPaymentMode("CLAWD")}
           >
             <Image
@@ -601,35 +617,46 @@ const InputPanel = ({
               alt=""
               width={16}
               height={16}
-              style={paymentMode === "CLAWD" ? {filter: 'invert(1)'} : {opacity: 0.7}}
+              style={paymentMode === "CLAWD" ? undefined : { opacity: 0.55 }}
             />
             CLAWD
           </button>
         </div>
-        <div className="mt-2 flex items-center justify-between text-xs px-1" style={{color: 'var(--vc-primary-hex)', opacity: 0.6}}>
-          <span>{paymentMode === "ETH" ? `~${ethRequiredFormatted} ETH` : `${clawdRequiredFormatted} CLAWD`}</span>
-          <span>Bal: {paymentMode === "ETH" ? `${ethBalanceFormatted} ETH` : `${clawdBalanceFormatted} CLAWD`}</span>
+        <div className="mt-2 flex items-center justify-between">
+          <span className="label-meta">
+            {paymentMode === "ETH" ? `~${ethRequiredFormatted} ETH` : `${clawdRequiredFormatted} CLAWD`}
+          </span>
+          <span className="label-meta">
+            Bal: {paymentMode === "ETH" ? `${ethBalanceFormatted} ETH` : `${clawdBalanceFormatted} CLAWD`}
+          </span>
         </div>
         {paymentMode === "CLAWD" && requiredClawd > 0n ? (
-          <p className="mt-1 text-xs opacity-50 px-1">
+          <p className="mt-1 label-meta">
             Allowance: {Number(formatUnits(clawdAllowance, clawdDecimals)).toLocaleString()} CLAWD{" "}
-            {clawdAllowance >= requiredClawd ? "✓" : "(needs approval)"}
+            {clawdAllowance >= requiredClawd ? "OK" : "(needs approval)"}
           </p>
         ) : null}
       </div>
 
       {!isConnected ? (
-        <div className="p-4 text-center text-sm" style={{border: '1px dashed oklch(var(--vc-primary) / 0.3)', color: 'var(--vc-primary-hex)', opacity: 0.6}}>
+        <div className="p-4 text-center text-sm" style={{ border: "1.5px dashed #0A0A0A", color: "var(--vc-muted)" }}>
           Connect wallet to transmit
         </div>
       ) : onWrongNetwork ? (
-        <button type="button" className="w-full py-4 bg-yellow-500/20 border border-yellow-500/40 text-yellow-300 text-sm hover:bg-yellow-500/30 transition-colors" onClick={onSwitchChain} disabled={isSwitchingChain}>
+        <button
+          type="button"
+          className="w-full py-4 text-sm font-bold uppercase tracking-wider"
+          style={{ border: "var(--vc-border)", background: "#facc15", color: "var(--vc-ink)" }}
+          onClick={onSwitchChain}
+          disabled={isSwitchingChain}
+        >
           {isSwitchingChain ? "Switching…" : "Switch to Base"}
         </button>
       ) : paymentMode === "CLAWD" && needsApproval ? (
         <button
           type="button"
-          className="w-full py-4 bg-primary/20 border border-primary/40 text-primary text-sm hover:bg-primary/30 transition-colors disabled:opacity-40"
+          className="w-full py-4 text-sm font-bold uppercase tracking-wider disabled:opacity-40"
+          style={{ border: "var(--vc-border)", background: "var(--vc-primary-hex)", color: "var(--vc-ink)" }}
           onClick={onApprove}
           disabled={approveSubmitting || inApproveCooldown || insufficientFunds}
         >
@@ -642,24 +669,23 @@ const InputPanel = ({
       ) : (
         <button
           type="button"
-          className="w-full font-bold transition-colors disabled:cursor-not-allowed vibe-submit-btn"
-          style={submitDisabled ? {padding: '20px', fontSize: 'clamp(1rem, 2.5vw, 1.3rem)', letterSpacing: '0.05em', background: 'oklch(var(--vc-primary) / 0.2)', color: 'var(--vc-primary-hex)', opacity: 0.4} : {padding: '20px', fontSize: 'clamp(1rem, 2.5vw, 1.3rem)', letterSpacing: '0.05em', background: 'var(--vc-primary-hex)', color: '#000000'}}
+          className="w-full font-bold uppercase tracking-wider disabled:cursor-not-allowed vibe-submit-btn"
+          style={{
+            padding: "18px",
+            fontSize: "clamp(1rem, 2.5vw, 1.2rem)",
+            letterSpacing: "0.06em",
+            ...(submitDisabled
+              ? { background: "#d4d4d0", color: "var(--vc-muted)", border: "var(--vc-border)" }
+              : {}),
+          }}
           onClick={onSubmit}
           disabled={submitDisabled}
         >
-          {submitting
-            ? "Transmitting..."
-            : insufficientFunds
-              ? `Insufficient ${paymentMode}`
-                : !groupName.trim()
-                  ? "Check Vibe"
-                  : "Check Vibe"}
+          {submitting ? "Transmitting..." : insufficientFunds ? `Insufficient ${paymentMode}` : "Vibecheck it"}
         </button>
       )}
 
-      <p className="text-[10px] text-center opacity-40 uppercase tracking-widest">
-        Real-time synthesis · Reddit · Farcaster · YouTube · Web · Cached 24h
-      </p>
+      <p className="label-meta text-center">Real-time synthesis · Reddit · Farcaster · Web · Cached 24h</p>
     </div>
   );
 };
@@ -673,22 +699,37 @@ const LoadingPanel = ({
   loadingText: string;
   txHash: `0x${string}`;
 }) => (
-  <div className="space-y-6 text-center py-10">
+  <div className="vibe-loading-frame space-y-6 text-center py-10 px-4">
     <div className="flex justify-center gap-2">
-      <div className="loading-dot w-3 h-3 rounded-full" style={{background: '#38bdf8'}} />
-      <div className="loading-dot w-3 h-3 rounded-full" style={{background: '#38bdf8'}} />
-      <div className="loading-dot w-3 h-3 rounded-full" style={{background: '#38bdf8'}} />
+      <div className="loading-dot w-3 h-3" />
+      <div className="loading-dot w-3 h-3" />
+      <div className="loading-dot w-3 h-3" />
     </div>
     <div>
-      <p className="text-xs opacity-40 uppercase tracking-widest mb-2">Diagnosing</p>
-      <p className="text-xl font-bold text-white italic" style={{fontSize: 'clamp(1.2rem, 3vw, 1.5rem)'}}>"{groupName}"</p>
+      <p className="label-meta mb-2">Diagnosing</p>
+      <p className="masthead" style={{ fontSize: "clamp(1.2rem, 3vw, 1.6rem)" }}>
+        {groupName}
+      </p>
     </div>
-    <p className="text-sm text-primary animate-pulse">{loadingText}</p>
-    <div className="w-full bg-primary/10 h-1 overflow-hidden" style={{borderRadius: '1px'}}>
-      <div className="h-full animate-pulse" style={{background: 'linear-gradient(90deg, transparent, #38bdf8, transparent)', width: '50%', animation: 'shimmer 2s infinite'}} />
+    <p style={{ fontSize: "0.95rem", color: "var(--vc-muted)" }}>{loadingText}</p>
+    <div style={{ width: "100%", height: "6px", border: "var(--vc-border)", background: "#fff" }}>
+      <div
+        style={{
+          height: "100%",
+          width: "40%",
+          background: "var(--vc-primary-hex)",
+          animation: "slideUp 0.8s ease-out infinite alternate",
+        }}
+      />
     </div>
-    <a href={`https://basescan.org/tx/${txHash}`} target="_blank" rel="noreferrer" className="block text-[10px] opacity-40 hover:opacity-80 transition-opacity">
-      TX: {txHash.slice(0, 10)}...{txHash.slice(-8)} ↗
+    <a
+      href={`https://basescan.org/tx/${txHash}`}
+      target="_blank"
+      rel="noreferrer"
+      className="label-meta block hover:opacity-70"
+      style={{ color: "var(--vc-ink)", textDecoration: "underline" }}
+    >
+      TX: {txHash.slice(0, 10)}...{txHash.slice(-8)}
     </a>
   </div>
 );
@@ -696,8 +737,12 @@ const LoadingPanel = ({
 const ResultPanel = ({ result, onReset }: { result: ZeitgeistResult; onReset: () => void }) => {
   const ageHours = Math.floor((Date.now() / 1000 - result.generatedAt) / 3_600);
   const confidence = result.confidence ?? (result.signals.length < 3 ? "low" : "medium");
-  const confidenceColor =
-    confidence === "high" ? "#4ade80" : confidence === "medium" ? "#facc15" : "#f87171";
+  const confidenceStyle =
+    confidence === "high"
+      ? { background: "var(--vc-primary-hex)", color: "var(--vc-ink)" }
+      : confidence === "medium"
+        ? { background: "#facc15", color: "var(--vc-ink)" }
+        : { background: "#fff", color: "#b91c1c", border: "var(--vc-border)" };
 
   const handleShare = async () => {
     const shareText = `VibeCheck — ${result.groupName}\n\nDiagnosis: ${result.moodHeadline}\n\nTLDR: ${result.tldr}\n\nPowered by VibeCheck · built on Base`;
@@ -716,7 +761,6 @@ const ResultPanel = ({ result, onReset }: { result: ZeitgeistResult; onReset: ()
           files: [file],
         });
       } catch {
-        // Web Share failed, fall back to clipboard
         navigator.clipboard.writeText(shareText);
         notification.success("Copied to clipboard!");
       }
@@ -728,20 +772,16 @@ const ResultPanel = ({ result, onReset }: { result: ZeitgeistResult; onReset: ()
 
   return (
     <div className="space-y-6">
-      <div className="flex items-end justify-between border-b pb-4" style={{ borderColor: "oklch(var(--vc-primary) / 0.2)" }}>
+      <div
+        className="flex items-end justify-between pb-4"
+        style={{ borderBottom: "var(--vc-border)" }}
+      >
         <div>
-          <p className="text-[10px] uppercase tracking-[0.2em] opacity-40 mb-1">
+          <p className="label-meta mb-1">
             Vibe #{result.generatedAt.toString().slice(-4)}
             {result.topicType ? ` · ${result.topicType}` : ""}
           </p>
-          <h2
-            style={{
-              fontSize: "clamp(1.5rem, 5vw, 2.5rem)",
-              fontWeight: 900,
-              fontStyle: "italic",
-              color: "#ffffff",
-            }}
-          >
+          <h2 className="masthead" style={{ fontSize: "clamp(1.5rem, 5vw, 2.4rem)" }}>
             {result.groupName}
           </h2>
         </div>
@@ -751,27 +791,25 @@ const ResultPanel = ({ result, onReset }: { result: ZeitgeistResult; onReset: ()
               fontSize: "10px",
               textTransform: "uppercase",
               letterSpacing: "0.1em",
-              color: confidenceColor,
-              border: `1px solid ${confidenceColor}55`,
-              padding: "2px 8px",
+              padding: "3px 8px",
+              fontWeight: 700,
+              ...confidenceStyle,
             }}
           >
             {confidence} confidence
           </span>
-          <span className="text-[10px] opacity-40 uppercase">
-            {result.cached ? `Cached ${ageHours}h` : "Live Signal"}
-          </span>
+          <span className="label-meta">{result.cached ? `Cached ${ageHours}h` : "Live Signal"}</span>
         </div>
       </div>
 
       {confidence === "low" ? (
-        <div className="border border-yellow-500/30 bg-yellow-500/10 p-3 text-xs text-yellow-300">
+        <div className="p-3 text-xs" style={{ border: "var(--vc-border)", background: "#fffbeb", color: "#92400e" }}>
           Low confidence — not enough fresh signal found. Take with extra salt.
         </div>
       ) : null}
 
       {result.imageUrl ? (
-        <div className="relative border-2" style={{ borderColor: "oklch(var(--vc-primary) / 0.2)" }}>
+        <div className="relative" style={{ border: "var(--vc-border)" }}>
           <Image
             src={result.imageUrl}
             alt={`Vibe snapshot of ${result.groupName}`}
@@ -784,8 +822,8 @@ const ResultPanel = ({ result, onReset }: { result: ZeitgeistResult; onReset: ()
           <a
             href={result.imageUrl}
             download={`vibecheck-${result.groupName.replace(/\s+/g, "-").toLowerCase()}.png`}
-            className="absolute top-2 right-2 text-[10px] bg-black/80 border px-2 py-1 hover:opacity-80 transition-colors"
-            style={{ borderColor: "oklch(var(--vc-primary) / 0.3)", color: "var(--vc-primary-hex)" }}
+            className="absolute top-2 right-2 text-[10px] px-2 py-1 uppercase tracking-wider font-bold"
+            style={{ background: "#fff", border: "var(--vc-border)", color: "var(--vc-ink)" }}
           >
             Download
           </a>
@@ -793,47 +831,31 @@ const ResultPanel = ({ result, onReset }: { result: ZeitgeistResult; onReset: ()
       ) : (
         <div
           style={{
-            border: "1px solid oklch(var(--vc-primary) / 0.35)",
-            background: "linear-gradient(145deg, oklch(var(--vc-primary) / 0.12), rgba(0,0,0,0.55))",
+            border: "var(--vc-border)",
+            background: "#fff",
             padding: "clamp(20px, 4vw, 36px)",
+            boxShadow: "6px 6px 0 var(--vc-primary-hex)",
           }}
         >
-          <p
-            style={{
-              fontSize: "10px",
-              textTransform: "uppercase",
-              letterSpacing: "0.2em",
-              color: "var(--vc-primary-hex)",
-              opacity: 0.7,
-              marginBottom: "12px",
-            }}
-          >
+          <p className="label-meta mb-3" style={{ color: "var(--vc-ink)" }}>
             VibeCheck Sharecard
           </p>
-          <p
-            style={{
-              fontSize: "clamp(1.4rem, 4vw, 2rem)",
-              fontWeight: 800,
-              fontStyle: "italic",
-              color: "#fff",
-              marginBottom: "8px",
-            }}
-          >
+          <p className="masthead mb-2" style={{ fontSize: "clamp(1.4rem, 4vw, 2rem)" }}>
             {result.groupName}
           </p>
           <p
             style={{
-              fontSize: "clamp(1.1rem, 3vw, 1.4rem)",
-              color: "var(--vc-primary-hex)",
-              fontStyle: "italic",
+              fontSize: "clamp(1.05rem, 3vw, 1.3rem)",
+              color: "var(--vc-ink)",
               marginBottom: "16px",
+              fontWeight: 700,
             }}
           >
             &ldquo;{result.moodHeadline}&rdquo;
           </p>
           <ul style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
             {result.signals.slice(0, 3).map((s, i) => (
-              <li key={i} style={{ fontSize: "0.85rem", color: "#e0f2fe", opacity: 0.85 }}>
+              <li key={i} style={{ fontSize: "0.85rem", color: "var(--vc-muted)" }}>
                 · {s}
               </li>
             ))}
@@ -842,110 +864,59 @@ const ResultPanel = ({ result, onReset }: { result: ZeitgeistResult; onReset: ()
       )}
 
       <div>
-        <p
-          style={{
-            fontSize: "11px",
-            textTransform: "uppercase",
-            letterSpacing: "0.2em",
-            color: "var(--vc-primary-hex)",
-            marginBottom: "8px",
-            opacity: 0.7,
-          }}
-        >
-          Diagnosis
-        </p>
-        <p
-          style={{
-            fontSize: "clamp(1.2rem, 4vw, 1.8rem)",
-            fontWeight: 700,
-            color: "var(--vc-primary-hex)",
-            fontStyle: "italic",
-            lineHeight: 1.3,
-          }}
-        >
+        <p className="label-meta mb-2">Diagnosis</p>
+        <p style={{ fontSize: "clamp(1.2rem, 4vw, 1.7rem)", fontWeight: 700, lineHeight: 1.3, color: "var(--vc-ink)" }}>
           &ldquo;{result.moodHeadline}&rdquo;
         </p>
       </div>
 
       {result.signals.length > 0 ? (
         <div>
-          <p
-            style={{
-              fontSize: "11px",
-              textTransform: "uppercase",
-              letterSpacing: "0.2em",
-              color: "var(--vc-primary-hex)",
-              marginBottom: "12px",
-              opacity: 0.7,
-            }}
-          >
-            Signals
-          </p>
+          <p className="label-meta mb-3">Signals</p>
           <ul style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
             {result.signals.map((s, i) => (
               <li
                 key={i}
                 className="signal-item"
-                style={{ display: "flex", gap: "14px", fontSize: "clamp(0.9rem, 2.5vw, 1.05rem)", lineHeight: 1.6 }}
+                style={{
+                  display: "flex",
+                  gap: "14px",
+                  fontSize: "clamp(0.9rem, 2.5vw, 1.05rem)",
+                  lineHeight: 1.6,
+                }}
               >
-                <span style={{ color: "var(--vc-primary-hex)", fontFamily: "Space Mono, monospace", flexShrink: 0 }}>
+                <span
+                  style={{
+                    background: "var(--vc-primary-hex)",
+                    color: "var(--vc-ink)",
+                    padding: "0 6px",
+                    fontWeight: 700,
+                    flexShrink: 0,
+                    height: "fit-content",
+                  }}
+                >
                   0{i + 1}
                 </span>
-                <span style={{ color: "#e0f2fe" }}>{s}</span>
+                <span style={{ color: "var(--vc-ink)" }}>{s}</span>
               </li>
             ))}
           </ul>
         </div>
       ) : null}
 
-      <div
-        style={{
-          borderLeft: "2px solid oklch(var(--vc-primary) / 0.3)",
-          paddingLeft: "16px",
-          background: "oklch(var(--vc-primary) / 0.05)",
-          padding: "12px 16px",
-        }}
-      >
-        <p
-          style={{
-            fontSize: "11px",
-            textTransform: "uppercase",
-            letterSpacing: "0.2em",
-            color: "var(--vc-primary-hex)",
-            marginBottom: "6px",
-            opacity: 0.7,
-          }}
-        >
+      <div style={{ border: "var(--vc-border)", borderLeft: "6px solid var(--vc-primary-hex)", padding: "12px 16px", background: "#fff" }}>
+        <p className="label-meta mb-2" style={{ color: "var(--vc-ink)" }}>
           TLDR
         </p>
-        <p style={{ fontSize: "clamp(0.95rem, 2.5vw, 1.05rem)", lineHeight: 1.7, color: "#e0f2fe", fontStyle: "italic" }}>
+        <p style={{ fontSize: "clamp(0.95rem, 2.5vw, 1.05rem)", lineHeight: 1.7, color: "var(--vc-ink)" }}>
           &ldquo;{result.tldr}&rdquo;
         </p>
       </div>
 
       {result.analysis ? (
         <div>
-          <p
-            style={{
-              fontSize: "11px",
-              textTransform: "uppercase",
-              letterSpacing: "0.2em",
-              color: "var(--vc-primary-hex)",
-              marginBottom: "8px",
-              opacity: 0.7,
-            }}
-          >
-            Analysis
-          </p>
-          <p
-            style={{
-              fontSize: "clamp(0.9rem, 2.5vw, 1rem)",
-              lineHeight: 1.75,
-              color: "#e0f2fe",
-              whiteSpace: "pre-wrap",
-              opacity: 0.9,
-            }}
-          >
+          <p className="label-meta mb-2">Analysis</p>
+          <p style={{ fontSize: "clamp(0.9rem, 2.5vw, 1rem)", lineHeight: 1.75, color: "var(--vc-ink)", whiteSpace: "pre-wrap" }}>
             {result.analysis}
           </p>
         </div>
@@ -953,18 +924,7 @@ const ResultPanel = ({ result, onReset }: { result: ZeitgeistResult; onReset: ()
 
       {result.sources && result.sources.length > 0 ? (
         <div>
-          <p
-            style={{
-              fontSize: "11px",
-              textTransform: "uppercase",
-              letterSpacing: "0.2em",
-              color: "var(--vc-primary-hex)",
-              marginBottom: "8px",
-              opacity: 0.7,
-            }}
-          >
-            Sources
-          </p>
+          <p className="label-meta mb-2">Sources</p>
           <ul style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
             {result.sources
               .filter(src => {
@@ -976,23 +936,24 @@ const ResultPanel = ({ result, onReset }: { result: ZeitgeistResult; onReset: ()
                 }
               })
               .map((src, i) => (
-              <li key={i}>
-                <a
-                  href={src.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  style={{
-                    fontSize: "0.85rem",
-                    color: "var(--vc-primary-hex)",
-                    textDecoration: "underline",
-                    textUnderlineOffset: "3px",
-                    opacity: 0.85,
-                  }}
-                >
-                  {src.label || src.url}
-                </a>
-              </li>
-            ))}
+                <li key={i}>
+                  <a
+                    href={src.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{
+                      fontSize: "0.85rem",
+                      color: "var(--vc-ink)",
+                      textDecoration: "underline",
+                      textUnderlineOffset: "3px",
+                      textDecorationThickness: "2px",
+                      textDecorationColor: "var(--vc-primary-hex)",
+                    }}
+                  >
+                    {src.label || src.url}
+                  </a>
+                </li>
+              ))}
           </ul>
         </div>
       ) : null}
@@ -1003,35 +964,41 @@ const ResultPanel = ({ result, onReset }: { result: ZeitgeistResult; onReset: ()
           alignItems: "center",
           justifyContent: "space-between",
           paddingTop: "16px",
-          borderTop: "1px solid oklch(var(--vc-primary) / 0.2)",
+          borderTop: "var(--vc-border)",
           gap: "8px",
           flexWrap: "wrap",
         }}
       >
         <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
           <button
+            type="button"
             style={{
-              background: "var(--vc-primary-hex)",
-              color: "#000",
-              padding: "8px 20px",
+              background: "var(--vc-ink)",
+              color: "#fff",
+              padding: "10px 20px",
               fontWeight: 700,
               fontSize: "0.85rem",
-              border: "none",
+              border: "var(--vc-border)",
               cursor: "pointer",
+              textTransform: "uppercase",
+              letterSpacing: "0.06em",
             }}
             onClick={onReset}
           >
             New Scan
           </button>
           <button
+            type="button"
             style={{
-              background: "transparent",
-              color: "var(--vc-primary-hex)",
-              padding: "8px 20px",
+              background: "var(--vc-primary-hex)",
+              color: "var(--vc-ink)",
+              padding: "10px 20px",
               fontWeight: 700,
               fontSize: "0.85rem",
-              border: "1px solid oklch(var(--vc-primary) / 0.4)",
+              border: "var(--vc-border)",
               cursor: "pointer",
+              textTransform: "uppercase",
+              letterSpacing: "0.06em",
             }}
             onClick={handleShare}
           >
@@ -1039,13 +1006,8 @@ const ResultPanel = ({ result, onReset }: { result: ZeitgeistResult; onReset: ()
           </button>
         </div>
         <a
-          style={{
-            fontSize: "10px",
-            color: "var(--vc-primary-hex)",
-            opacity: 0.6,
-            textTransform: "uppercase",
-            letterSpacing: "0.1em",
-          }}
+          className="label-meta"
+          style={{ color: "var(--vc-ink)", textDecoration: "underline" }}
           href={`https://basescan.org/tx/${result.txHash}`}
           target="_blank"
           rel="noreferrer"

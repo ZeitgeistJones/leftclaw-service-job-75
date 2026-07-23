@@ -4,8 +4,8 @@
   "description": "Pay $0.25 in ETH or CLAWD on Base mainnet, get an AI-synthesized cultural snapshot of any group",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#020c18",
-  "theme_color": "#38bdf8",
+  "background_color": "#F4F4F0",
+  "theme_color": "#B8FF3C",
   "orientation": "portrait-primary",
   "icons": [
     {

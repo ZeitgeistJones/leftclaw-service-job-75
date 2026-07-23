@@ -9,17 +9,19 @@ type ColorPreset = {
 };
 
 const PRESETS: ColorPreset[] = [
-  { name: "VibeCheck", primary: "#38bdf8", background: "#020c18" },
-  { name: "Terminal", primary: "#22c55e", background: "#0a0a0a" },
-  { name: "Sunset", primary: "#f97316", background: "#1a0a0a" },
-  { name: "Purple Haze", primary: "#a855f7", background: "#0f0520" },
-  { name: "Gold Rush", primary: "#eab308", background: "#0f0a00" },
-  { name: "Rose", primary: "#f43f5e", background: "#150508" },
-  { name: "Cyan", primary: "#06b6d4", background: "#001a1f" },
-  { name: "Lime", primary: "#84cc16", background: "#0a1000" },
+  { name: "Acid Paper", primary: "#B8FF3C", background: "#F4F4F0" },
+  { name: "Ink", primary: "#B8FF3C", background: "#E8E8E2" },
+  { name: "Terminal", primary: "#22c55e", background: "#F4F4F0" },
+  { name: "Hot Press", primary: "#FF5A45", background: "#F4F4F0" },
+  { name: "Gold", primary: "#eab308", background: "#F4F4F0" },
+  { name: "Cyan Paper", primary: "#06b6d4", background: "#F4F4F0" },
+  { name: "Rose", primary: "#f43f5e", background: "#F4F4F0" },
+  { name: "Violet", primary: "#7c3aed", background: "#F4F4F0" },
 ];
 
-const STORAGE_KEY = "vibecheck-colors";
+const STORAGE_KEY = "vibecheck-colors-v2";
+const DEFAULT_PRIMARY = "#B8FF3C";
+const DEFAULT_BG = "#F4F4F0";
 
 function hexToHsl(hex: string): string {
   const r = parseInt(hex.slice(1, 3), 16) / 255;
@@ -51,10 +53,18 @@ function hexToHsl(hex: string): string {
   return `${Math.round(h * 360)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`;
 }
 
+function adjustBrightness(hex: string, percent: number): string {
+  const num = parseInt(hex.slice(1), 16);
+  const r = Math.min(255, Math.max(0, (num >> 16) + percent));
+  const g = Math.min(255, Math.max(0, ((num >> 8) & 0x00ff) + percent));
+  const b = Math.min(255, Math.max(0, (num & 0x0000ff) + percent));
+  return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
+}
+
 export function ColorCustomizer() {
   const [isOpen, setIsOpen] = useState(false);
-  const [primary, setPrimary] = useState("#38bdf8");
-  const [background, setBackground] = useState("#020c18");
+  const [primary, setPrimary] = useState(DEFAULT_PRIMARY);
+  const [background, setBackground] = useState(DEFAULT_BG);
 
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
@@ -75,8 +85,9 @@ export function ColorCustomizer() {
     document.documentElement.style.setProperty("--vc-primary-hex", primary);
     document.documentElement.style.setProperty("--vc-bg", hexToHsl(background));
     document.documentElement.style.setProperty("--vc-bg-hex", background);
-    document.documentElement.style.setProperty("--vc-card", hexToHsl(adjustBrightness(background, 15)));
-    document.documentElement.style.setProperty("--card-bg", adjustBrightness(background, 15));
+    const card = adjustBrightness(background, 8);
+    document.documentElement.style.setProperty("--vc-card", hexToHsl(card));
+    document.documentElement.style.setProperty("--card-bg", card);
   }, [primary, background]);
 
   const applyPreset = (preset: ColorPreset) => {
@@ -88,13 +99,15 @@ export function ColorCustomizer() {
     <div className="fixed bottom-4 right-4 z-50">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-10 h-10 flex items-center justify-center transition-all hover:scale-110"
+        className="w-10 h-10 flex items-center justify-center transition-transform hover:-translate-y-0.5"
         style={{
-          background: "var(--vc-card)",
-          border: "1px solid var(--vc-primary-hex)",
-          color: "var(--vc-primary-hex)",
+          background: "#fff",
+          border: "1.5px solid #0A0A0A",
+          color: "#0A0A0A",
+          boxShadow: "3px 3px 0 var(--vc-primary-hex)",
         }}
         aria-label="Customize colors"
+        aria-expanded={isOpen}
       >
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <circle cx="12" cy="12" r="3" />
@@ -104,22 +117,21 @@ export function ColorCustomizer() {
 
       {isOpen && (
         <div
-          className="absolute bottom-12 right-0 p-4 space-y-4 min-w-[200px] backdrop-blur-sm"
+          className="absolute bottom-12 right-0 p-4 space-y-4 min-w-[200px]"
           style={{
-            background: "var(--vc-bg-hex)",
-            border: "1px solid var(--vc-primary-hex)",
-            boxShadow: "0 0 30px var(--vc-primary-hex)",
+            background: "#fff",
+            border: "1.5px solid #0A0A0A",
+            boxShadow: "4px 4px 0 var(--vc-primary-hex)",
+            color: "#0A0A0A",
           }}
         >
-          <div className="text-xs uppercase tracking-widest" style={{ color: "var(--vc-primary-hex)", opacity: 0.6 }}>
+          <div className="text-xs uppercase tracking-widest" style={{ color: "#5C5C5C" }}>
             Customize Theme
           </div>
 
           <div className="space-y-3">
             <div className="flex items-center justify-between gap-3">
-              <label className="text-xs" style={{ color: "var(--vc-primary-hex)" }}>
-                Accent
-              </label>
+              <label className="text-xs uppercase tracking-wider">Accent</label>
               <input
                 type="color"
                 value={primary}
@@ -129,9 +141,7 @@ export function ColorCustomizer() {
               />
             </div>
             <div className="flex items-center justify-between gap-3">
-              <label className="text-xs" style={{ color: "var(--vc-primary-hex)" }}>
-                Background
-              </label>
+              <label className="text-xs uppercase tracking-wider">Background</label>
               <input
                 type="color"
                 value={background}
@@ -143,7 +153,7 @@ export function ColorCustomizer() {
           </div>
 
           <div className="space-y-2">
-            <div className="text-xs uppercase tracking-wider" style={{ color: "var(--vc-primary-hex)", opacity: 0.5 }}>
+            <div className="text-xs uppercase tracking-wider" style={{ color: "#5C5C5C" }}>
               Presets
             </div>
             <div className="grid grid-cols-4 gap-1">
@@ -151,13 +161,13 @@ export function ColorCustomizer() {
                 <button
                   key={preset.name}
                   onClick={() => applyPreset(preset)}
-                  className="w-8 h-8 transition-transform hover:scale-110"
+                  className="w-8 h-8 transition-transform hover:scale-105"
                   style={{
                     background: `linear-gradient(135deg, ${preset.background}, ${preset.primary})`,
                     border:
                       primary === preset.primary && background === preset.background
-                        ? `2px solid white`
-                        : "1px solid rgba(255,255,255,0.2)",
+                        ? "2px solid #0A0A0A"
+                        : "1.5px solid #0A0A0A",
                   }}
                   title={preset.name}
                 />
@@ -167,28 +177,20 @@ export function ColorCustomizer() {
 
           <button
             onClick={() => {
-              setPrimary("#38bdf8");
-              setBackground("#020c18");
+              setPrimary(DEFAULT_PRIMARY);
+              setBackground(DEFAULT_BG);
             }}
-            className="w-full text-xs py-2 transition-colors"
+            className="w-full text-xs py-2 uppercase tracking-wider font-bold"
             style={{
               background: "transparent",
-              border: "1px solid var(--vc-primary-hex)",
-              color: "var(--vc-primary-hex)",
+              border: "1.5px solid #0A0A0A",
+              color: "#0A0A0A",
             }}
           >
-            Reset to Default
+            Reset to Acid Paper
           </button>
         </div>
       )}
     </div>
   );
-}
-
-function adjustBrightness(hex: string, percent: number): string {
-  const num = parseInt(hex.slice(1), 16);
-  const r = Math.min(255, Math.max(0, (num >> 16) + percent));
-  const g = Math.min(255, Math.max(0, ((num >> 8) & 0x00ff) + percent));
-  const b = Math.min(255, Math.max(0, (num & 0x0000ff) + percent));
-  return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
 }
